@@ -12,7 +12,8 @@ import {
   Sparkles,
   Coffee,
   CloudRain,
-  Radio,
+  Shuffle,
+  Repeat,
   ChevronUp,
   ChevronDown
 } from "lucide-react";
@@ -31,12 +32,16 @@ export function HealingSoundPlayer({ locale = "ko" }: HealingSoundPlayerProps) {
     tracks,
     volume,
     isMuted,
+    isShuffle,
+    autoAdvance,
     playTrack,
     togglePlay,
     setVolume,
     toggleMute,
     selectNextTrack,
     selectPrevTrack,
+    toggleShuffle,
+    toggleAutoAdvance,
   } = useHealingAudio();
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -61,8 +66,17 @@ export function HealingSoundPlayer({ locale = "ko" }: HealingSoundPlayerProps) {
     <div className="relative">
       
       {/* Mini Player Capsule */}
-      <div className="flex items-center gap-2 p-1.5 px-3 rounded-2xl bg-sage-50/90 dark:bg-slate-900/90 border border-sage-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
+      <div className="flex items-center gap-1.5 p-1.5 px-2.5 rounded-2xl bg-sage-50/90 dark:bg-slate-900/90 border border-sage-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
         
+        {/* Previous Track */}
+        <button
+          onClick={selectPrevTrack}
+          className="p-1 rounded-lg text-slate-400 hover:text-sage-600 transition-colors hidden sm:block"
+          title={isEn ? "Previous song" : "이전 곡"}
+        >
+          <SkipBack className="w-3 h-3" />
+        </button>
+
         {/* Play/Pause Button with Pulsing Wave */}
         <button
           onClick={togglePlay}
@@ -82,10 +96,19 @@ export function HealingSoundPlayer({ locale = "ko" }: HealingSoundPlayerProps) {
           )}
         </button>
 
+        {/* Next Track */}
+        <button
+          onClick={selectNextTrack}
+          className="p-1 rounded-lg text-slate-400 hover:text-sage-600 transition-colors"
+          title={isEn ? "Next song" : "다음 곡"}
+        >
+          <SkipForward className="w-3 h-3" />
+        </button>
+
         {/* Track Title */}
         <div
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-1.5 cursor-pointer select-none max-w-[140px] sm:max-w-[200px]"
+          className="flex items-center gap-1.5 cursor-pointer select-none max-w-[120px] sm:max-w-[180px]"
         >
           <span className="hidden sm:inline">
             {getCategoryIcon(currentTrack.category)}
@@ -94,8 +117,13 @@ export function HealingSoundPlayer({ locale = "ko" }: HealingSoundPlayerProps) {
             <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
               {currentTrack.title}
             </p>
-            <p className="text-[9px] text-sage-600 dark:text-sage-400 font-semibold truncate">
-              {isPlaying ? (isEn ? "♪ Playing Relaxation" : "♪ 힐링 사운드 재생 중") : isEn ? "Relaxation BGM" : "힐링 음악 라운지"}
+            <p className="text-[9px] text-sage-600 dark:text-sage-400 font-semibold truncate flex items-center gap-1">
+              {isPlaying ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{isEn ? "Continuous Autoplay" : "연속 자동 재생 중"}</span>
+                </>
+              ) : isEn ? "Relaxation BGM" : "힐링 음악 라운지"}
             </p>
           </div>
         </div>
@@ -112,7 +140,7 @@ export function HealingSoundPlayer({ locale = "ko" }: HealingSoundPlayerProps) {
 
       {/* Expanded Sound Lounge Modal / Dropdown */}
       {isExpanded && (
-        <div className="absolute right-0 top-12 z-50 w-72 sm:w-80 p-4 rounded-3xl bg-white/95 dark:bg-slate-900/95 border border-sage-200 dark:border-slate-800 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute right-0 top-12 z-50 w-72 sm:w-84 p-4 rounded-3xl bg-white/95 dark:bg-slate-900/95 border border-sage-200 dark:border-slate-800 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
           
           <div className="flex items-center justify-between pb-3 border-b border-sage-100 dark:border-slate-800 mb-3">
             <div className="flex items-center gap-2">
@@ -124,7 +152,7 @@ export function HealingSoundPlayer({ locale = "ko" }: HealingSoundPlayerProps) {
                   {isEn ? "Healing Audio Lounge" : "마음의 안정 힐링 라운지"}
                 </h4>
                 <p className="text-[10px] text-slate-400">
-                  {isEn ? "Classical, Chanson, 528Hz & Nature Rain" : "클래식, 샹송, 528Hz 명상 및 자연 빗소리"}
+                  {isEn ? "Continuous Autoplay Playlist (Classical, Chanson, 528Hz & Rain)" : "클래식, 샹송, 528Hz 명상 및 자연 빗소리 전곡 연속 재생"}
                 </p>
               </div>
             </div>
@@ -137,14 +165,67 @@ export function HealingSoundPlayer({ locale = "ko" }: HealingSoundPlayerProps) {
             </button>
           </div>
 
-          {/* Volume Control */}
-          <div className="flex items-center gap-2.5 p-2 rounded-2xl bg-sage-50/60 dark:bg-slate-850 border border-sage-100 dark:border-slate-800 mb-3">
+          {/* Player Mode Options (Continuous Autoplay / Shuffle) */}
+          <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-sage-50/60 dark:bg-slate-850 border border-sage-100 dark:border-slate-800 mb-3 text-xs">
+            <button
+              onClick={toggleAutoAdvance}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl font-bold transition-all text-[11px] ${
+                autoAdvance
+                  ? "bg-sage-600 text-white shadow-xs"
+                  : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
+              }`}
+              title={isEn ? "Continuous autoplay all songs in playlist" : "전체 곡 순차 연속 자동 재생"}
+            >
+              <Repeat className="w-3 h-3" />
+              <span>{isEn ? "Autoplay Next Songs" : "다음 곡 연속 재생"}</span>
+            </button>
+
+            <button
+              onClick={toggleShuffle}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl font-bold transition-all text-[11px] ${
+                isShuffle
+                  ? "bg-lavender-600 text-white shadow-xs"
+                  : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
+              }`}
+              title={isEn ? "Shuffle playback" : "랜덤 셔플 재생"}
+            >
+              <Shuffle className="w-3 h-3" />
+              <span>{isEn ? "Shuffle" : "셔플"}</span>
+            </button>
+          </div>
+
+          {/* Volume Control & Skip Buttons */}
+          <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 mb-3">
+            <button
+              onClick={selectPrevTrack}
+              className="p-1 rounded-lg text-slate-600 dark:text-slate-300 hover:text-sage-600"
+              title={isEn ? "Previous song" : "이전 곡"}
+            >
+              <SkipBack className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={togglePlay}
+              className="p-1 rounded-lg text-sage-600 dark:text-sage-400 hover:scale-105 transition-transform"
+            >
+              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+            </button>
+
+            <button
+              onClick={selectNextTrack}
+              className="p-1 rounded-lg text-slate-600 dark:text-slate-300 hover:text-sage-600"
+              title={isEn ? "Next song" : "다음 곡"}
+            >
+              <SkipForward className="w-3.5 h-3.5" />
+            </button>
+
             <button
               onClick={toggleMute}
-              className="p-1 rounded-lg text-slate-600 dark:text-slate-300 hover:text-sage-600"
+              className="p-1 rounded-lg text-slate-600 dark:text-slate-300 hover:text-sage-600 ml-1"
             >
               {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
+
             <input
               type="range"
               min="0"
@@ -196,10 +277,10 @@ export function HealingSoundPlayer({ locale = "ko" }: HealingSoundPlayerProps) {
           {/* Breathing Animation Banner */}
           <div className="mt-3 pt-2.5 border-t border-sage-100 dark:border-slate-800 flex items-center justify-between text-[10px] text-sage-700 dark:text-sage-400">
             <span className="flex items-center gap-1.5 animate-breathe">
-              <span className="w-2 h-2 rounded-full bg-sage-500" />
-              {isEn ? "Deep Breath In & Out (Calm Mind)" : "심호흡과 함께 읽는 편안한 건강 뉴스"}
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              {isEn ? "Continuous Playlist Active (Relax & Breathe)" : "연속 자동 재생 활성화 (마음의 안정과 힐링)"}
             </span>
-            <span className="font-mono text-slate-400">432Hz/528Hz</span>
+            <span className="font-mono text-slate-400">{tracks.length} Songs</span>
           </div>
 
         </div>
