@@ -2,9 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getStudioNarrationUrl } from "@/lib/studioNarration";
 
 export type VoicePersona =
-  | "ko-female-anchor"
   | "ko-male-anchor"
-  | "us-female-anchor"
   | "us-male-executive";
 
 export interface SpeechOptions {
@@ -20,11 +18,11 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [supported, setSupported] = useState<boolean>(true);
-  const [activeVoiceName, setActiveVoiceName] = useState<string>("🎙️ 여성 아나운서");
+  const [activeVoiceName, setActiveVoiceName] = useState<string>("🎙️ 전문 남성 앵커 (고음질)");
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
   const [totalSentences, setTotalSentences] = useState<number>(0);
   const [selectedPersona, setSelectedPersona] = useState<VoicePersona>(
-    defaultLocale === "en" ? "us-female-anchor" : "ko-female-anchor"
+    defaultLocale === "en" ? "us-male-executive" : "ko-male-anchor"
   );
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
 
@@ -64,7 +62,7 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
     }
   }, []);
 
-  // Primary speak method
+  // Primary speak method: strictly locks Korean to genuine Male Anchor
   const speak = useCallback(
     (text: string, options: SpeechOptions | ("ko" | "en") = defaultLocale) => {
       if (typeof window === "undefined" || !audioRef.current) return;
@@ -79,27 +77,9 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
       const hasKorean = /[가-힣]/.test(text);
       const isKo = resolvedOptions.locale === "ko" || (resolvedOptions.locale !== "en" && (defaultLocale === "ko" || hasKorean));
       
-      const persona = resolvedOptions.persona || selectedPersona;
-      setSelectedPersona(persona);
-
-      let voiceKey: "ko-female" | "ko-male" | "en-female" | "en-male" = "ko-female";
-      if (isKo) {
-        if (persona === "ko-male-anchor") {
-          voiceKey = "ko-male";
-          setActiveVoiceName("🎙️ 남성 앵커 (한국어)");
-        } else {
-          voiceKey = "ko-female";
-          setActiveVoiceName("🎙️ 여성 아나운서 (한국어)");
-        }
-      } else {
-        if (persona === "us-male-executive") {
-          voiceKey = "en-male";
-          setActiveVoiceName("🎙️ US Executive (English)");
-        } else {
-          voiceKey = "en-female";
-          setActiveVoiceName("🎙️ US Anchor (English)");
-        }
-      }
+      const voiceKey: "ko-male" | "en-male" = isKo ? "ko-male" : "en-male";
+      setSelectedPersona(isKo ? "ko-male-anchor" : "us-male-executive");
+      setActiveVoiceName(isKo ? "🎙️ 전문 남성 앵커 (한국어)" : "🎙️ US Executive (English)");
 
       const rate = resolvedOptions.rate || playbackRate;
       setPlaybackRate(rate);
@@ -143,7 +123,7 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
           }
         });
     },
-    [defaultLocale, playbackRate, selectedPersona]
+    [defaultLocale, playbackRate]
   );
 
   const stop = useCallback(() => {
@@ -180,14 +160,8 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
     (persona: VoicePersona) => {
       setSelectedPersona(persona);
       optionsRef.current.persona = persona;
-      if (isSpeaking && audioRef.current) {
-        speak(sentencesRef.current[0] || "베스트셀러 브리핑입니다.", {
-          ...optionsRef.current,
-          persona,
-        });
-      }
     },
-    [isSpeaking, speak]
+    []
   );
 
   const changeRate = useCallback(

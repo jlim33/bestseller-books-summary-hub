@@ -120,55 +120,11 @@ export function DailyBriefingModal({
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
                 <Mic className="w-3.5 h-3.5 text-amber-600" />
-                <span>{isEn ? "Voice:" : "음성 선택:"}</span>
+                <span>{isEn ? "Voice:" : "전문 음성:"}</span>
               </span>
-              {isEn ? (
-                <div className="flex items-center gap-1 font-bold text-[10px]">
-                  <button
-                    onClick={() => changePersona("us-female-anchor")}
-                    className={`px-2 py-1 rounded-lg border transition-all ${
-                      selectedPersona === "us-female-anchor"
-                        ? "bg-amber-600 text-white border-amber-600"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    🎙️ Anchor
-                  </button>
-                  <button
-                    onClick={() => changePersona("us-male-executive")}
-                    className={`px-2 py-1 rounded-lg border transition-all ${
-                      selectedPersona === "us-male-executive"
-                        ? "bg-amber-600 text-white border-amber-600"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    🎙️ Executive
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 font-bold text-[10px]">
-                  <button
-                    onClick={() => changePersona("ko-female-anchor")}
-                    className={`px-2 py-1 rounded-lg border transition-all ${
-                      selectedPersona === "ko-female-anchor"
-                        ? "bg-amber-600 text-white border-amber-600"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    🎙️ 여성 아나운서
-                  </button>
-                  <button
-                    onClick={() => changePersona("ko-male-anchor")}
-                    className={`px-2 py-1 rounded-lg border transition-all ${
-                      selectedPersona === "ko-male-anchor"
-                        ? "bg-amber-600 text-white border-amber-600"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    🎙️ 남성 앵커
-                  </button>
-                </div>
-              )}
+              <span className="px-2.5 py-1 rounded-lg bg-amber-600 text-white font-bold text-[10px] shadow-xs">
+                {isEn ? "🎙️ US Executive Voice (Male)" : "🎙️ 전문 남성 앵커 (고음질)"}
+              </span>
             </div>
 
             <div className="flex items-center gap-1 font-mono font-bold text-[10px]">
