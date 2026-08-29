@@ -4,6 +4,7 @@ import { READING_AUDIO_TRACKS, MUSIC_GENRES, AudioTrack, MusicGenre } from "@/li
 const VOLUME_STORAGE_KEY = "bookpulse_bgm_volume_v1";
 
 export function useReadingAudio() {
+  // Manual Play/Pause by default (AutoPlay is completely stopped)
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
   const [currentTrack, setCurrentTrack] = useState<AudioTrack>(READING_AUDIO_TRACKS[0]);
@@ -11,10 +12,11 @@ export function useReadingAudio() {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
-  const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
+  const [autoAdvance, setAutoAdvance] = useState<boolean>(false); // Manual stop by default
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentTrackRef = useRef<AudioTrack>(currentTrack);
+  const isPlayingRef = useRef<boolean>(isPlaying);
   const isShuffleRef = useRef<boolean>(isShuffle);
   const autoAdvanceRef = useRef<boolean>(autoAdvance);
   const volumeRef = useRef<number>(volume);
@@ -29,55 +31,66 @@ export function useReadingAudio() {
 
   useEffect(() => {
     currentTrackRef.current = currentTrack;
+    isPlayingRef.current = isPlaying;
     isShuffleRef.current = isShuffle;
     autoAdvanceRef.current = autoAdvance;
     volumeRef.current = volume;
     isMutedRef.current = isMuted;
     activeTracksRef.current = activeTracks;
-  }, [currentTrack, isShuffle, autoAdvance, volume, isMuted, activeTracks]);
+  }, [currentTrack, isPlaying, isShuffle, autoAdvance, volume, isMuted, activeTracks]);
 
   const selectNextTrackRef = useRef<() => void>(() => {});
 
-  const playTrack = useCallback((track: AudioTrack) => {
+  // Select a track without forcing autoplay if currently paused
+  const selectTrack = useCallback((track: AudioTrack, shouldPlay: boolean = true) => {
     if (!audioRef.current) return;
     setCurrentTrack(track);
     currentTrackRef.current = track;
-    setIsLoading(true);
 
     audioRef.current.src = track.src;
     audioRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
 
-    audioRef.current
-      .play()
-      .then(() => {
-        setIsPlaying(true);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.warn("Studio audio play notice:", err);
-        setIsLoading(false);
-        setIsPlaying(false);
-      });
+    if (shouldPlay || isPlayingRef.current) {
+      setIsLoading(true);
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.warn("Audio playback notice:", err);
+          setIsLoading(false);
+          setIsPlaying(false);
+        });
+    } else {
+      setIsPlaying(false);
+      setIsLoading(false);
+    }
   }, []);
+
+  const playTrack = useCallback((track: AudioTrack) => {
+    selectTrack(track, true);
+  }, [selectTrack]);
 
   const selectNextTrack = useCallback(() => {
     const trackList = activeTracksRef.current.length > 0 ? activeTracksRef.current : READING_AUDIO_TRACKS;
     if (isShuffleRef.current) {
       const randomIndex = Math.floor(Math.random() * trackList.length);
-      playTrack(trackList[randomIndex]);
+      selectTrack(trackList[randomIndex], isPlayingRef.current);
     } else {
       const currentIndex = trackList.findIndex((t) => t.id === currentTrackRef.current.id);
       const nextIndex = (currentIndex + 1) % trackList.length;
-      playTrack(trackList[nextIndex]);
+      selectTrack(trackList[nextIndex], isPlayingRef.current);
     }
-  }, [playTrack]);
+  }, [selectTrack]);
 
   const selectPrevTrack = useCallback(() => {
     const trackList = activeTracksRef.current.length > 0 ? activeTracksRef.current : READING_AUDIO_TRACKS;
     const currentIndex = trackList.findIndex((t) => t.id === currentTrackRef.current.id);
     const prevIndex = (currentIndex - 1 + trackList.length) % trackList.length;
-    playTrack(trackList[prevIndex]);
-  }, [playTrack]);
+    selectTrack(trackList[prevIndex], isPlayingRef.current);
+  }, [selectTrack]);
 
   useEffect(() => {
     selectNextTrackRef.current = selectNextTrack;
@@ -87,11 +100,12 @@ export function useReadingAudio() {
     (genreId: string) => {
       setSelectedGenre(genreId);
       const genreTracks = genreId === "all" ? READING_AUDIO_TRACKS : READING_AUDIO_TRACKS.filter((t) => t.category === genreId);
-      if (genreTracks.length > 0 && isPlaying) {
-        playTrack(genreTracks[0]);
+      if (genreTracks.length > 0) {
+        // Switch track but preserve current play/pause state
+        selectTrack(genreTracks[0], isPlayingRef.current);
       }
     },
-    [isPlaying, playTrack]
+    [selectTrack]
   );
 
   useEffect(() => {
@@ -105,6 +119,7 @@ export function useReadingAudio() {
 
       const audio = new Audio();
       audio.loop = false;
+      audio.autoplay = false; // Completely disable browser autoplay
       audio.volume = savedVol;
       audioRef.current = audio;
 
@@ -116,13 +131,14 @@ export function useReadingAudio() {
       audio.onpause = () => setIsPlaying(false);
       audio.onerror = () => {
         setIsLoading(false);
-        if (autoAdvanceRef.current) {
-          setTimeout(() => selectNextTrackRef.current(), 1200);
-        }
+        setIsPlaying(false);
       };
       audio.onended = () => {
         if (autoAdvanceRef.current) {
           selectNextTrackRef.current();
+        } else {
+          // Explicit manual pause on track finish
+          setIsPlaying(false);
         }
       };
 
@@ -150,7 +166,7 @@ export function useReadingAudio() {
           setIsLoading(false);
         })
         .catch((err) => {
-          console.warn("Audio play error:", err);
+          console.warn("Manual audio play notice:", err);
           setIsLoading(false);
           setIsPlaying(false);
         });
@@ -201,6 +217,7 @@ export function useReadingAudio() {
     isShuffle,
     autoAdvance,
     playTrack,
+    selectTrack,
     togglePlay,
     setVolume,
     toggleMute,

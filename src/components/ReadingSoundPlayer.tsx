@@ -17,8 +17,8 @@ import {
   ChevronUp,
   ChevronDown,
   BookOpen,
-  LayoutGrid,
-  Radio
+  Radio,
+  SlidersHorizontal
 } from "lucide-react";
 import { useReadingAudio } from "@/hooks/useReadingAudio";
 import { AudioTrack } from "@/lib/types";
@@ -37,6 +37,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
     isShuffle,
     autoAdvance,
     playTrack,
+    selectTrack,
     togglePlay,
     setVolume,
     toggleMute,
@@ -49,8 +50,8 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
   const [isExpanded, setIsExpanded] = useState(false);
   const isEn = locale === "en";
 
-  const getGenreIcon = (genreId: string) => {
-    switch (genreId) {
+  const getGenreIcon = (category: string) => {
+    switch (category) {
       case "classical":
         return <Music className="w-3.5 h-3.5 text-amber-500" />;
       case "chanson":
@@ -60,7 +61,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
       case "nature":
         return <CloudRain className="w-3.5 h-3.5 text-teal-500" />;
       default:
-        return <LayoutGrid className="w-3.5 h-3.5 text-amber-600" />;
+        return <BookOpen className="w-3.5 h-3.5 text-amber-600" />;
     }
   };
 
@@ -76,7 +77,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
         <button
           onClick={selectPrevTrack}
           className="p-1 rounded-lg text-slate-400 hover:text-amber-600 transition-colors hidden sm:block"
-          title={isEn ? "Previous song" : "이전 곡"}
+          title={isEn ? "Previous track" : "이전 트랙"}
         >
           <SkipBack className="w-3 h-3" />
         </button>
@@ -89,7 +90,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
               ? "bg-gradient-to-r from-amber-500 to-amber-700 text-white shadow-sm shadow-amber-500/25 scale-105"
               : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-amber-200 dark:border-slate-700 hover:text-amber-600"
           }`}
-          title={isPlaying ? (isEn ? "Pause Reading Lounge" : "독서 BGM 일시정지") : (isEn ? "Play Reading Music" : "몰입 독서 BGM 재생")}
+          title={isPlaying ? (isEn ? "Pause Music" : "일시정지") : (isEn ? "Play Music" : "음악 재생")}
         >
           {isLoading ? (
             <div className="w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
@@ -104,12 +105,12 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
         <button
           onClick={selectNextTrack}
           className="p-1 rounded-lg text-slate-400 hover:text-amber-600 transition-colors"
-          title={isEn ? "Next song" : "다음 곡"}
+          title={isEn ? "Next track" : "다음 트랙"}
         >
           <SkipForward className="w-3 h-3" />
         </button>
 
-        {/* Track Title & Current Genre */}
+        {/* Track Title & Current Playing State */}
         <div
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex items-center gap-1.5 cursor-pointer select-none max-w-[120px] sm:max-w-[170px]"
@@ -125,9 +126,11 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
               {isPlaying ? (
                 <>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{isEn ? `${currentTrack.genreEn} • Autoplay` : `${currentTrack.genreKo} • 연속 재생 중`}</span>
+                  <span>{isEn ? `${currentTrack.genreEn} • Playing` : `${currentTrack.genreKo} • 재생 중`}</span>
                 </>
-              ) : isEn ? "Reading Ambient Lounge" : "북카페 힐링 라운지"}
+              ) : (
+                <span className="text-slate-400 font-normal">{isEn ? "Paused • Click to Play" : "일시정지됨 (클릭하여 재생)"}</span>
+              )}
             </p>
           </div>
         </div>
@@ -153,10 +156,10 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
               </div>
               <div>
                 <h4 className="font-extrabold text-xs text-slate-900 dark:text-white">
-                  {isEn ? "Categorized Study & Reading Lounge" : "장르별 심층 몰입 독서 라운지 BGM"}
+                  {isEn ? "Manual Study & Reading Audio Lounge" : "심층 몰입 독서 오디오 라운지"}
                 </h4>
                 <p className="text-[10px] text-slate-400">
-                  {isEn ? "Select your preferred cognitive focus genre" : "원하시는 장르를 선택하여 전곡 연속 재생을 즐겨보세요"}
+                  {isEn ? "Select and manually control playback (Play / Pause)" : "원하시는 장르 및 트랙을 수동으로 재생/일시정지 하실 수 있습니다"}
                 </p>
               </div>
             </div>
@@ -169,7 +172,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
             </button>
           </div>
 
-          {/* 🎼 Genre Selector Pills (New Feature!) */}
+          {/* 🎼 Genre Selector Pills */}
           <div className="space-y-1.5 mb-3">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
               <Radio className="w-3 h-3 text-amber-500" />
@@ -205,7 +208,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
             </div>
           </div>
 
-          {/* Autoplay & Shuffle Toggle */}
+          {/* Manual Play / Pause / Shuffle Mode Options */}
           <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-amber-50/60 dark:bg-slate-850 border border-amber-100 dark:border-slate-800 mb-3 text-xs">
             <button
               onClick={toggleAutoAdvance}
@@ -214,9 +217,10 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
                   ? "bg-amber-600 text-white shadow-xs"
                   : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
               }`}
+              title={isEn ? "Toggle auto-advance to next song on finish" : "곡 종료 시 다음 곡 자동 넘김 설정"}
             >
               <Repeat className="w-3 h-3" />
-              <span>{isEn ? "Continuous Next" : "다음 곡 자동 재생"}</span>
+              <span>{autoAdvance ? (isEn ? "Autoplay Next: ON" : "다음 곡 자동 넘김: 켜짐") : (isEn ? "Autoplay Next: OFF (Manual)" : "다음 곡 자동 넘김: 꺼짐 (수동)")}</span>
             </button>
 
             <button
@@ -232,7 +236,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
             </button>
           </div>
 
-          {/* Volume Control */}
+          {/* Master Volume & Playback Controls */}
           <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 mb-3">
             <button
               onClick={selectPrevTrack}
@@ -243,9 +247,11 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
 
             <button
               onClick={togglePlay}
-              className="p-1 rounded-lg text-amber-600 dark:text-amber-400 hover:scale-105 transition-transform"
+              className={`p-2 rounded-xl transition-transform ${
+                isPlaying ? "bg-amber-600 text-white shadow-sm" : "bg-white dark:bg-slate-800 text-amber-600 border border-amber-300 dark:border-slate-700"
+              }`}
             >
-              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
             </button>
 
             <button
@@ -277,18 +283,41 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
           <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
             {tracks.map((track) => {
               const isSelected = track.id === currentTrack.id;
+              const isTrackPlaying = isPlaying && isSelected;
+
               return (
-                <button
+                <div
                   key={track.id}
-                  onClick={() => playTrack(track)}
-                  className={`w-full p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-2 ${
+                  onClick={() => selectTrack(track, true)}
+                  className={`w-full p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
                     isSelected
                       ? "bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 shadow-xs"
                       : "hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    {getGenreIcon(track.category)}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isSelected) {
+                          togglePlay();
+                        } else {
+                          playTrack(track);
+                        }
+                      }}
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+                        isTrackPlaying
+                          ? "bg-amber-600 text-white"
+                          : "bg-white dark:bg-slate-800 text-amber-600 border border-amber-200 dark:border-slate-700"
+                      }`}
+                    >
+                      {isTrackPlaying ? (
+                        <Pause className="w-3 h-3 fill-current" />
+                      ) : (
+                        <Play className="w-3 h-3 fill-current ml-0.5" />
+                      )}
+                    </button>
+
                     <div className="truncate">
                       <p className="text-[11px] font-bold truncate">{track.title}</p>
                       <p className="text-[9px] text-slate-400 truncate">{track.artist}</p>
@@ -298,7 +327,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
                   <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-white/70 dark:bg-slate-800 text-slate-500 shrink-0">
                     {track.categoryLabel}
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>
