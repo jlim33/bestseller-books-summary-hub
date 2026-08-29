@@ -11,11 +11,10 @@ export type VoicePersona =
 export interface SpeechOptions {
   locale?: "en" | "ko";
   persona?: VoicePersona;
-  rate?: number; // 0.85 to 1.5
-  pitch?: number; // 0.6 to 1.3
+  rate?: number;
+  pitch?: number;
 }
 
-// Check if a voice is an explicit male profile
 export const isExplicitMaleVoice = (voice: SpeechSynthesisVoice | null): boolean => {
   if (!voice) return false;
   const n = voice.name.toLowerCase();
@@ -52,25 +51,26 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
   const sentenceIndexRef = useRef<number>(0);
   const isCancelledRef = useRef<boolean>(false);
   const optionsRef = useRef<SpeechOptions>({});
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Initialize and load system voices
   useEffect(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      setSupported(true);
-
-      const updateVoices = () => {
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length > 0) {
-          setAvailableVoices(voices);
-        }
-      };
-
-      updateVoices();
-      window.speechSynthesis.onvoiceschanged = updateVoices;
+    if (typeof window !== "undefined") {
+      if ("speechSynthesis" in window) {
+        setSupported(true);
+        const updateVoices = () => {
+          const voices = window.speechSynthesis.getVoices();
+          if (voices.length > 0) {
+            setAvailableVoices(voices);
+          }
+        };
+        updateVoices();
+        window.speechSynthesis.onvoiceschanged = updateVoices;
+      }
+      audioRef.current = new Audio();
     }
   }, []);
 
-  // Find best native voice matching persona & locale
   const getBestVoice = useCallback(
     (locale: "en" | "ko" = "en", persona: VoicePersona = "ko-female-anchor"): SpeechSynthesisVoice | null => {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
@@ -78,20 +78,15 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
       if (voices.length === 0) return null;
 
       if (locale === "ko" || persona.startsWith("ko-")) {
-        // Korean native voices
         const koVoices = voices.filter(
           (v) => v.lang === "ko-KR" || v.lang.startsWith("ko_KR") || v.lang.startsWith("ko")
         );
 
         if (persona === "ko-male-anchor") {
-          // Priority 1: Explicit Korean Male Voices (InJoon, Hyunsu, Minho, Seungwoo, Google Male)
           const explicitMaleKo = koVoices.find((v) => isExplicitMaleVoice(v));
           if (explicitMaleKo) return explicitMaleKo;
-
-          // Priority 2: Standard Korean voice (will apply deep pitch modulation to 0.68)
           if (koVoices.length > 0) return koVoices[0];
         } else if (persona === "ko-female-anchor") {
-          // Female Announcer (SunHi Natural, Google Female, Yuna, Heami, Sora)
           const femaleKo = koVoices.find(
             (v) =>
               (v.name.includes("SunHi") ||
@@ -104,7 +99,6 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
           );
           if (femaleKo) return femaleKo;
         } else if (persona === "ko-book-narrator") {
-          // Warm Audiobook Narrator
           const naturalKo = koVoices.find(
             (v) =>
               v.name.includes("Natural") ||
@@ -117,7 +111,6 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
 
         return koVoices[0] || voices.find((v) => v.lang.startsWith("ko")) || voices[0];
       } else {
-        // US English native voices
         const usVoices = voices.filter(
           (v) => v.lang === "en-US" || v.lang.startsWith("en_US") || v.lang.startsWith("en-")
         );
@@ -154,7 +147,6 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
     []
   );
 
-  // Play a single sentence utterance with calibrated announcer cadence and pitch transposition
   const speakSentence = useCallback(
     (index: number) => {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -183,7 +175,7 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
         utterance.voice = voice;
         let displayName = voice.name.replace("Microsoft ", "").replace("Google ", "");
         if (persona === "ko-male-anchor" && !hasExplicitMale) {
-          displayName = `${displayName} (중저음 앵커 톤)`;
+          displayName = "남성 앵커 (중저음 톤)";
         }
         setActiveVoiceName(displayName);
       }
@@ -191,20 +183,18 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
       utterance.lang = locale === "en" ? "en-US" : "ko-KR";
       utterance.rate = rate;
 
-      // Precision Pitch Calibration for Real Gender & Tone Distinction
+      // Frequency tuning
       if (persona === "ko-male-anchor") {
-        // If system already has a dedicated male voice (like InJoon), use pitch 0.88
-        // If falling back to universal voice (like Google 한국어), pitch down to 0.68 for deep male resonance!
-        utterance.pitch = hasExplicitMale ? 0.88 : 0.68;
-        utterance.rate = rate * 0.94; // slightly slower, authoritative cadence
+        utterance.pitch = hasExplicitMale ? 0.85 : 0.65; // Deep Baritone
+        utterance.rate = rate * 0.92;
       } else if (persona === "ko-female-anchor") {
-        utterance.pitch = 1.08; // Bright, crisp, articulate female broadcast pitch
+        utterance.pitch = 1.08;
         utterance.rate = rate * 1.0;
       } else if (persona === "ko-book-narrator") {
-        utterance.pitch = 0.85; // Warm, deep, relaxed storytelling baritone
-        utterance.rate = rate * 0.92;
+        utterance.pitch = 0.82;
+        utterance.rate = rate * 0.90;
       } else if (persona === "us-male-executive") {
-        utterance.pitch = hasExplicitMale ? 0.92 : 0.72;
+        utterance.pitch = hasExplicitMale ? 0.90 : 0.70;
       } else if (persona === "us-female-anchor") {
         utterance.pitch = 1.08;
       } else {
@@ -220,7 +210,6 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
 
       utterance.onend = () => {
         if (!isCancelledRef.current) {
-          // Announcer breathing pause between sentences
           const pauseDuration = persona === "ko-book-narrator" ? 170 : 130;
           setTimeout(() => {
             speakSentence(index + 1);
@@ -243,7 +232,6 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
     [getBestVoice, playbackRate, selectedPersona, defaultLocale]
   );
 
-  // Primary speak entry point with intelligent Korean & English text chunking
   const speak = useCallback(
     (text: string, options: SpeechOptions | ("ko" | "en") = defaultLocale) => {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -258,7 +246,6 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
       if (resolvedOptions.persona) setSelectedPersona(resolvedOptions.persona);
       if (resolvedOptions.rate) setPlaybackRate(resolvedOptions.rate);
 
-      // Clean text for natural broadcast enunciation
       const cleaned = text
         .replace(/["""]/g, '"')
         .replace(/[''']/g, "'")
@@ -269,7 +256,6 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
         .replace(/~/g, " ")
         .replace(/\n+/g, ". ");
 
-      // Split sentences cleanly by punctuation (. ! ? ; \n)
       const rawSentences = cleaned.split(/(?<=[.?!;])\s+/);
       const chunks = rawSentences
         .map((s) => s.trim())
@@ -288,6 +274,9 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       isCancelledRef.current = true;
       window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       setIsSpeaking(false);
       setIsPaused(false);
       setCurrentSentenceIndex(0);
