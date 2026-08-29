@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   BookOpen,
@@ -18,7 +18,9 @@ import {
   Target,
   Quote,
   Mic,
-  Gauge
+  Gauge,
+  Headphones,
+  Radio
 } from "lucide-react";
 import { BookItem, ChapterSummary } from "@/lib/types";
 import { useSpeech, VoicePersona } from "@/hooks/useSpeech";
@@ -56,7 +58,8 @@ export function BookDetailModal({
   const [completedChapters, setCompletedChapters] = useState<number[]>([]);
   const [readingTheme, setReadingTheme] = useState<"clean" | "sepia" | "dark">("clean");
   const [fontSize, setFontSize] = useState<"sm" | "base" | "lg">("base");
-  const [showVoiceControls, setShowVoiceControls] = useState<boolean>(false);
+  const [playingChapterIndex, setPlayingChapterIndex] = useState<number | null>(null);
+  const [isAudiobookMode, setIsAudiobookMode] = useState<boolean>(false);
 
   const toggleChapterComplete = (chapNum: number) => {
     setCompletedChapters((prev) =>
@@ -67,10 +70,17 @@ export function BookDetailModal({
   const currentChapter = book.chapters[activeChapterIndex];
   const progressPercent = Math.round((completedChapters.length / book.chapters.length) * 100);
 
-  const handleListenChapter = (chap: ChapterSummary) => {
-    if (isSpeaking) {
+  // Play a specific chapter
+  const handleListenSpecificChapter = (index: number) => {
+    setActiveChapterIndex(index);
+    const chap = book.chapters[index];
+
+    if (isSpeaking && playingChapterIndex === index) {
       stop();
+      setPlayingChapterIndex(null);
+      setIsAudiobookMode(false);
     } else {
+      setPlayingChapterIndex(index);
       const script = `${chap.chapterTitle}. ${chap.coreTakeaway}. ${chap.detailedContent}. ${chap.actionableLesson}`;
       speak(script, {
         locale: isEn ? "en" : "ko",
@@ -79,6 +89,39 @@ export function BookDetailModal({
       });
     }
   };
+
+  // Continuous Full Audiobook Mode (Reads chapter 1 to end)
+  const handleListenFullBook = () => {
+    if (isSpeaking && isAudiobookMode) {
+      stop();
+      setIsAudiobookMode(false);
+      setPlayingChapterIndex(null);
+    } else {
+      setIsAudiobookMode(true);
+      setActiveChapterIndex(0);
+      setPlayingChapterIndex(0);
+      const fullScript = book.chapters
+        .map(
+          (c) =>
+            `${c.chapterTitle}. ${c.coreTakeaway}. ${c.detailedContent}. ${c.actionableLesson}`
+        )
+        .join(" ... Next Chapter ... ");
+
+      speak(fullScript, {
+        locale: isEn ? "en" : "ko",
+        persona: selectedPersona,
+        rate: playbackRate,
+      });
+    }
+  };
+
+  // Reset playing chapter indicator when speech stops
+  useEffect(() => {
+    if (!isSpeaking) {
+      setPlayingChapterIndex(null);
+      setIsAudiobookMode(false);
+    }
+  }, [isSpeaking]);
 
   const getThemeBg = () => {
     switch (readingTheme) {
@@ -220,25 +263,52 @@ export function BookDetailModal({
               </div>
             </div>
 
-            {/* US Native Voice Broadcast Narration Section */}
+            {/* US Native Voice Broadcast & Audiobook Mode */}
             <div className="space-y-2">
+              
+              {/* 1. Read Current Chapter Button */}
               <button
-                onClick={() => handleListenChapter(currentChapter)}
+                onClick={() => handleListenSpecificChapter(activeChapterIndex)}
                 className={`w-full py-2.5 px-4 rounded-2xl flex items-center justify-center gap-2 font-extrabold text-xs transition-all shadow-md ${
-                  isSpeaking
+                  isSpeaking && playingChapterIndex === activeChapterIndex
                     ? "bg-rose-600 text-white animate-pulse"
                     : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950"
                 }`}
               >
-                {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                {isSpeaking && playingChapterIndex === activeChapterIndex ? (
+                  <VolumeX className="w-4 h-4" />
+                ) : (
+                  <Volume2 className="w-4 h-4" />
+                )}
                 <span>
-                  {isSpeaking
-                    ? (isEn ? `Speaking (${currentSentenceIndex}/${totalSentences}) • Stop` : `음성 낭독 중 (${currentSentenceIndex}/${totalSentences}) • 정지`)
-                    : (isEn ? "🎙️ Listen in US Native Voice" : "🎙️ 미국 네이티브 음성 낭독 듣기")}
+                  {isSpeaking && playingChapterIndex === activeChapterIndex
+                    ? (isEn
+                        ? `Reading Ch.${activeChapterIndex + 1} (${currentSentenceIndex}/${totalSentences}) • Stop`
+                        : `챕터 ${activeChapterIndex + 1} 낭독 중 (${currentSentenceIndex}/${totalSentences}) • 정지`)
+                    : (isEn
+                        ? `🎙️ Read Chapter ${activeChapterIndex + 1} (US Voice)`
+                        : `🎙️ 챕터 ${activeChapterIndex + 1} 미국 음성 낭독`)}
                 </span>
               </button>
 
-              {/* Toggle Voice & Speed Settings */}
+              {/* 2. Read Full Book (Continuous Audiobook Mode) Button */}
+              <button
+                onClick={handleListenFullBook}
+                className={`w-full py-2 px-3 rounded-2xl flex items-center justify-center gap-1.5 font-bold text-[11px] border transition-all ${
+                  isAudiobookMode && isSpeaking
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-md animate-pulse"
+                    : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-amber-50"
+                }`}
+              >
+                <Headphones className="w-3.5 h-3.5 text-amber-500" />
+                <span>
+                  {isAudiobookMode && isSpeaking
+                    ? (isEn ? "Continuous Audiobook Mode Playing • Stop" : "전 챕터 연속 오디오북 재생 중 • 정지")
+                    : (isEn ? "🎧 Read All Chapters (Full Audiobook Mode)" : "🎧 전 챕터 연속 오디오북 모드")}
+                </span>
+              </button>
+
+              {/* Voice Persona & Speed Controls */}
               <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-slate-850 border border-amber-200/60 dark:border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
                   <span className="flex items-center gap-1">
@@ -299,7 +369,7 @@ export function BookDetailModal({
               </div>
             </div>
 
-            {/* Chapters Navigation Accordion / List */}
+            {/* Chapters Navigation Accordion / List with Individual Read Buttons */}
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
                 <span>{isEn ? "Table of Chapters:" : "전체 챕터 목록:"}</span>
@@ -310,6 +380,7 @@ export function BookDetailModal({
                 {book.chapters.map((chap, idx) => {
                   const isSelected = activeChapterIndex === idx;
                   const isDone = completedChapters.includes(chap.chapterNumber);
+                  const isChapterPlaying = isSpeaking && playingChapterIndex === idx;
 
                   return (
                     <div
@@ -321,7 +392,7 @@ export function BookDetailModal({
                           : "hover:bg-slate-50 dark:hover:bg-slate-850 border-transparent text-slate-600 dark:text-slate-300"
                       }`}
                     >
-                      <div className="flex items-start gap-2 min-w-0">
+                      <div className="flex items-start gap-2 min-w-0 flex-1">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -338,8 +409,14 @@ export function BookDetailModal({
                         </button>
 
                         <div className="truncate">
-                          <p className="text-xs font-black truncate">
-                            {chap.chapterTitle}
+                          <p className="text-xs font-black truncate flex items-center gap-1.5">
+                            <span>{chap.chapterTitle}</span>
+                            {isChapterPlaying && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-bold animate-pulse">
+                                <span>🎙️</span>
+                                <span>Playing</span>
+                              </span>
+                            )}
                           </p>
                           <p className="text-[10px] text-slate-400 truncate">
                             {chap.chapterSubtitle || chap.coreTakeaway}
@@ -347,9 +424,31 @@ export function BookDetailModal({
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-mono text-slate-400 shrink-0">
-                        {chap.readTimeMinutes}m
-                      </span>
+                      {/* Individual Listen / Read Button for EVERY chapter */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleListenSpecificChapter(idx);
+                          }}
+                          className={`p-1.5 rounded-xl transition-all ${
+                            isChapterPlaying
+                              ? "bg-rose-600 text-white shadow-xs scale-110"
+                              : "bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-slate-700 hover:bg-amber-600 hover:text-white"
+                          }`}
+                          title={isChapterPlaying ? (isEn ? "Stop reading chapter" : "챕터 낭독 정지") : (isEn ? "Read this chapter" : "이 챕터 음성 낭독")}
+                        >
+                          {isChapterPlaying ? (
+                            <VolumeX className="w-3.5 h-3.5" />
+                          ) : (
+                            <Volume2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+
+                        <span className="text-[10px] font-mono text-slate-400">
+                          {chap.readTimeMinutes}m
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
@@ -380,9 +479,32 @@ export function BookDetailModal({
             {/* Chapter Header */}
             <div className="border-b border-amber-200/60 dark:border-slate-800 pb-5">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="px-3 py-1 rounded-full text-xs font-mono font-black bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                  Chapter {currentChapter.chapterNumber} of {book.chapters.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-mono font-black bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    Chapter {currentChapter.chapterNumber} of {book.chapters.length}
+                  </span>
+
+                  {/* 1-Click Quick Listen Button in Chapter Header */}
+                  <button
+                    onClick={() => handleListenSpecificChapter(activeChapterIndex)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
+                      isSpeaking && playingChapterIndex === activeChapterIndex
+                        ? "bg-rose-600 text-white animate-pulse"
+                        : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 hover:bg-amber-600 hover:text-white"
+                    }`}
+                  >
+                    {isSpeaking && playingChapterIndex === activeChapterIndex ? (
+                      <VolumeX className="w-3.5 h-3.5" />
+                    ) : (
+                      <Volume2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {isSpeaking && playingChapterIndex === activeChapterIndex
+                        ? (isEn ? "Playing" : "낭독 중")
+                        : (isEn ? "Listen Chapter" : "이 챕터 듣기")}
+                    </span>
+                  </button>
+                </div>
 
                 <div className="flex items-center gap-3 text-xs text-slate-400 font-mono">
                   <span className="flex items-center gap-1">
