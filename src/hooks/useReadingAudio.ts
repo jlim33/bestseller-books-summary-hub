@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { READING_AUDIO_TRACKS } from "@/lib/audioTracks";
-import { AudioTrack } from "@/lib/types";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { READING_AUDIO_TRACKS, MUSIC_GENRES, AudioTrack, MusicGenre } from "@/lib/audioTracks";
 
 const VOLUME_STORAGE_KEY = "bookpulse_bgm_volume_v1";
 
 export function useReadingAudio() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [selectedGenre, setSelectedGenre] = useState<string>("all");
   const [currentTrack, setCurrentTrack] = useState<AudioTrack>(READING_AUDIO_TRACKS[0]);
   const [volume, setVolumeState] = useState<number>(0.35);
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -17,6 +17,15 @@ export function useReadingAudio() {
   const currentTrackRef = useRef<AudioTrack>(currentTrack);
   const isShuffleRef = useRef<boolean>(isShuffle);
   const autoAdvanceRef = useRef<boolean>(autoAdvance);
+  const selectedGenreRef = useRef<string>(selectedGenre);
+
+  // Active playlist based on selected genre
+  const activeTracks = useMemo(() => {
+    if (selectedGenre === "all") return READING_AUDIO_TRACKS;
+    return READING_AUDIO_TRACKS.filter((t) => t.category === selectedGenre);
+  }, [selectedGenre]);
+
+  const activeTracksRef = useRef<AudioTrack[]>(activeTracks);
 
   useEffect(() => {
     currentTrackRef.current = currentTrack;
@@ -29,6 +38,11 @@ export function useReadingAudio() {
   useEffect(() => {
     autoAdvanceRef.current = autoAdvance;
   }, [autoAdvance]);
+
+  useEffect(() => {
+    selectedGenreRef.current = selectedGenre;
+    activeTracksRef.current = activeTracks;
+  }, [selectedGenre, activeTracks]);
 
   const playTrack = useCallback((track: AudioTrack) => {
     if (!audioRef.current) return;
@@ -54,21 +68,35 @@ export function useReadingAudio() {
   }, []);
 
   const selectNextTrack = useCallback(() => {
+    const trackList = activeTracksRef.current.length > 0 ? activeTracksRef.current : READING_AUDIO_TRACKS;
     if (isShuffleRef.current) {
-      const randomIndex = Math.floor(Math.random() * READING_AUDIO_TRACKS.length);
-      playTrack(READING_AUDIO_TRACKS[randomIndex]);
+      const randomIndex = Math.floor(Math.random() * trackList.length);
+      playTrack(trackList[randomIndex]);
     } else {
-      const currentIndex = READING_AUDIO_TRACKS.findIndex((t) => t.id === currentTrackRef.current.id);
-      const nextIndex = (currentIndex + 1) % READING_AUDIO_TRACKS.length;
-      playTrack(READING_AUDIO_TRACKS[nextIndex]);
+      const currentIndex = trackList.findIndex((t) => t.id === currentTrackRef.current.id);
+      const nextIndex = (currentIndex + 1) % trackList.length;
+      playTrack(trackList[nextIndex]);
     }
   }, [playTrack]);
 
   const selectPrevTrack = useCallback(() => {
-    const currentIndex = READING_AUDIO_TRACKS.findIndex((t) => t.id === currentTrackRef.current.id);
-    const prevIndex = (currentIndex - 1 + READING_AUDIO_TRACKS.length) % READING_AUDIO_TRACKS.length;
-    playTrack(READING_AUDIO_TRACKS[prevIndex]);
+    const trackList = activeTracksRef.current.length > 0 ? activeTracksRef.current : READING_AUDIO_TRACKS;
+    const currentIndex = trackList.findIndex((t) => t.id === currentTrackRef.current.id);
+    const prevIndex = (currentIndex - 1 + trackList.length) % trackList.length;
+    playTrack(trackList[prevIndex]);
   }, [playTrack]);
+
+  // Switch genre and auto-play first track of that genre
+  const handleSelectGenre = useCallback(
+    (genreId: string) => {
+      setSelectedGenre(genreId);
+      const genreTracks = genreId === "all" ? READING_AUDIO_TRACKS : READING_AUDIO_TRACKS.filter((t) => t.category === genreId);
+      if (genreTracks.length > 0 && isPlaying) {
+        playTrack(genreTracks[0]);
+      }
+    },
+    [isPlaying, playTrack]
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -171,7 +199,11 @@ export function useReadingAudio() {
     isPlaying,
     isLoading,
     currentTrack,
-    tracks: READING_AUDIO_TRACKS,
+    tracks: activeTracks,
+    allTracks: READING_AUDIO_TRACKS,
+    genres: MUSIC_GENRES,
+    selectedGenre,
+    setSelectedGenre: handleSelectGenre,
     volume,
     isMuted,
     isShuffle,

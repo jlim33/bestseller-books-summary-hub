@@ -16,7 +16,9 @@ import {
   Repeat,
   ChevronUp,
   ChevronDown,
-  BookOpen
+  BookOpen,
+  LayoutGrid,
+  Radio
 } from "lucide-react";
 import { useReadingAudio } from "@/hooks/useReadingAudio";
 import { AudioTrack } from "@/lib/types";
@@ -27,6 +29,9 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
     isLoading,
     currentTrack,
     tracks,
+    genres,
+    selectedGenre,
+    setSelectedGenre,
     volume,
     isMuted,
     isShuffle,
@@ -44,25 +49,27 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
   const [isExpanded, setIsExpanded] = useState(false);
   const isEn = locale === "en";
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
+  const getGenreIcon = (genreId: string) => {
+    switch (genreId) {
       case "classical":
-        return <Music className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />;
-      case "ambient":
-        return <Coffee className="w-3.5 h-3.5 text-amber-600" />;
+        return <Music className="w-3.5 h-3.5 text-amber-500" />;
+      case "chanson":
+        return <Coffee className="w-3.5 h-3.5 text-orange-500" />;
       case "meditation":
         return <Sparkles className="w-3.5 h-3.5 text-indigo-400" />;
       case "nature":
         return <CloudRain className="w-3.5 h-3.5 text-teal-500" />;
       default:
-        return <BookOpen className="w-3.5 h-3.5 text-amber-500" />;
+        return <LayoutGrid className="w-3.5 h-3.5 text-amber-600" />;
     }
   };
+
+  const currentGenreMeta = genres.find((g) => g.id === selectedGenre) || genres[0];
 
   return (
     <div className="relative">
       
-      {/* Mini Player Capsule */}
+      {/* Mini Player Capsule on Header */}
       <div className="flex items-center gap-1.5 p-1.5 px-2.5 rounded-2xl bg-amber-50/90 dark:bg-slate-900/90 border border-amber-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
         
         {/* Previous Track */}
@@ -102,13 +109,13 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
           <SkipForward className="w-3 h-3" />
         </button>
 
-        {/* Track Title */}
+        {/* Track Title & Current Genre */}
         <div
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex items-center gap-1.5 cursor-pointer select-none max-w-[120px] sm:max-w-[170px]"
         >
           <span className="hidden sm:inline">
-            {getCategoryIcon(currentTrack.category)}
+            {getGenreIcon(currentTrack.category)}
           </span>
           <div className="truncate">
             <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
@@ -118,7 +125,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
               {isPlaying ? (
                 <>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{isEn ? "Continuous Reading Autoplay" : "몰입 독서 연속 재생 중"}</span>
+                  <span>{isEn ? `${currentTrack.genreEn} • Autoplay` : `${currentTrack.genreKo} • 연속 재생 중`}</span>
                 </>
               ) : isEn ? "Reading Ambient Lounge" : "북카페 힐링 라운지"}
             </p>
@@ -134,10 +141,11 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
         </button>
       </div>
 
-      {/* Expanded Sound Lounge Modal */}
+      {/* Expanded Categorized Sound Lounge Modal */}
       {isExpanded && (
-        <div className="absolute right-0 top-12 z-50 w-72 sm:w-84 p-4 rounded-3xl bg-white/95 dark:bg-slate-900/95 border border-amber-200 dark:border-slate-800 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute right-0 top-12 z-50 w-80 sm:w-96 p-4 rounded-3xl bg-white/98 dark:bg-slate-900/98 border border-amber-200 dark:border-slate-800 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
           
+          {/* Header */}
           <div className="flex items-center justify-between pb-3 border-b border-amber-100 dark:border-slate-800 mb-3">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
@@ -145,10 +153,10 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
               </div>
               <div>
                 <h4 className="font-extrabold text-xs text-slate-900 dark:text-white">
-                  {isEn ? "Study & Reading Lounge" : "심층 몰입 독서 라운지 BGM"}
+                  {isEn ? "Categorized Study & Reading Lounge" : "장르별 심층 몰입 독서 라운지 BGM"}
                 </h4>
                 <p className="text-[10px] text-slate-400">
-                  {isEn ? "Continuous Classical Piano, Chanson & 528Hz Stream" : "쇼팽 피아노, 북카페 샹송, 528Hz 집중 주파수 연속 재생"}
+                  {isEn ? "Select your preferred cognitive focus genre" : "원하시는 장르를 선택하여 전곡 연속 재생을 즐겨보세요"}
                 </p>
               </div>
             </div>
@@ -159,6 +167,42 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
             >
               ✕
             </button>
+          </div>
+
+          {/* 🎼 Genre Selector Pills (New Feature!) */}
+          <div className="space-y-1.5 mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+              <Radio className="w-3 h-3 text-amber-500" />
+              <span>{isEn ? "Select Music Genre:" : "음악 장르 카테고리 선택:"}</span>
+            </p>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              {genres.map((g) => {
+                const isSelected = selectedGenre === g.id;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => setSelectedGenre(g.id)}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all ${
+                      isSelected
+                        ? "bg-amber-600 text-white shadow-sm scale-105"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-amber-50"
+                    }`}
+                  >
+                    {getGenreIcon(g.id)}
+                    <span>{isEn ? g.labelEn : g.labelKo}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Genre Description Banner */}
+            <div className="p-2 rounded-xl bg-amber-50/70 dark:bg-slate-850 border border-amber-200/60 dark:border-slate-800 text-[10px] text-amber-800 dark:text-amber-300 flex items-center justify-between">
+              <span>{isEn ? currentGenreMeta.descriptionEn : currentGenreMeta.descriptionKo}</span>
+              <span className="font-mono font-bold text-slate-400 shrink-0 ml-2">
+                {tracks.length} {isEn ? "Tracks" : "곡"}
+              </span>
+            </div>
           </div>
 
           {/* Autoplay & Shuffle Toggle */}
@@ -172,7 +216,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
               }`}
             >
               <Repeat className="w-3 h-3" />
-              <span>{isEn ? "Autoplay Next" : "다음 곡 자동 재생"}</span>
+              <span>{isEn ? "Continuous Next" : "다음 곡 자동 재생"}</span>
             </button>
 
             <button
@@ -229,7 +273,7 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
             />
           </div>
 
-          {/* Track List */}
+          {/* Categorized Track List */}
           <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
             {tracks.map((track) => {
               const isSelected = track.id === currentTrack.id;
@@ -237,14 +281,14 @@ export function ReadingSoundPlayer({ locale = "ko" }: { locale?: "ko" | "en" }) 
                 <button
                   key={track.id}
                   onClick={() => playTrack(track)}
-                  className={`w-full p-2 rounded-2xl text-left transition-all flex items-center justify-between gap-2 ${
+                  className={`w-full p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-2 ${
                     isSelected
                       ? "bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 shadow-xs"
                       : "hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    {getCategoryIcon(track.category)}
+                    {getGenreIcon(track.category)}
                     <div className="truncate">
                       <p className="text-[11px] font-bold truncate">{track.title}</p>
                       <p className="text-[9px] text-slate-400 truncate">{track.artist}</p>
