@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
-export type VoicePersona = "us-male-executive" | "us-female-anchor" | "us-natural-studio" | "ko-natural";
+export type VoicePersona =
+  | "ko-female-anchor"
+  | "ko-male-anchor"
+  | "ko-book-narrator"
+  | "us-male-executive"
+  | "us-female-anchor"
+  | "us-natural-studio";
 
 export interface SpeechOptions {
   locale?: "en" | "ko";
@@ -9,16 +15,18 @@ export interface SpeechOptions {
   pitch?: number; // 0.9 to 1.1
 }
 
-export function useSpeech() {
+export function useSpeech(defaultLocale: "en" | "ko" = "en") {
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [supported, setSupported] = useState<boolean>(false);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [activeVoiceName, setActiveVoiceName] = useState<string>("US Native Voice");
+  const [activeVoiceName, setActiveVoiceName] = useState<string>("현지 전문 아나운서");
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
   const [totalSentences, setTotalSentences] = useState<number>(0);
-  const [selectedPersona, setSelectedPersona] = useState<VoicePersona>("us-male-executive");
-  const [playbackRate, setPlaybackRate] = useState<number>(1.0);
+  const [selectedPersona, setSelectedPersona] = useState<VoicePersona>(
+    defaultLocale === "ko" ? "ko-female-anchor" : "us-male-executive"
+  );
+  const [playbackRate, setPlaybackRate] = useState<number>(0.98);
 
   const sentencesRef = useRef<string[]>([]);
   const sentenceIndexRef = useRef<number>(0);
@@ -44,12 +52,58 @@ export function useSpeech() {
 
   // Find best native voice matching persona & locale
   const getBestVoice = useCallback(
-    (locale: "en" | "ko" = "en", persona: VoicePersona = "us-male-executive"): SpeechSynthesisVoice | null => {
+    (locale: "en" | "ko" = "en", persona: VoicePersona = "ko-female-anchor"): SpeechSynthesisVoice | null => {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
       const voices = window.speechSynthesis.getVoices();
       if (voices.length === 0) return null;
 
-      if (locale === "en") {
+      if (locale === "ko" || persona.startsWith("ko-")) {
+        // Korean native voices
+        const koVoices = voices.filter(
+          (v) => v.lang === "ko-KR" || v.lang.startsWith("ko_KR") || v.lang.startsWith("ko")
+        );
+
+        if (persona === "ko-female-anchor") {
+          // Female Announcer (SunHi Natural, Google Female, Yuna, Heami)
+          const femaleKo = koVoices.find(
+            (v) =>
+              (v.name.includes("SunHi") ||
+                v.name.includes("Sun-Hi") ||
+                v.name.includes("Yuna") ||
+                v.name.includes("Heami") ||
+                v.name.includes("Sora") ||
+                (v.name.includes("Google") && (v.name.includes("Female") || v.name.includes("한국어")))) &&
+              !v.name.includes("InJoon") &&
+              !v.name.includes("Hyunsu")
+          );
+          if (femaleKo) return femaleKo;
+        } else if (persona === "ko-male-anchor") {
+          // Male Anchor (InJoon Natural, Google Male, Hyunsu, Minho)
+          const maleKo = koVoices.find(
+            (v) =>
+              v.name.includes("InJoon") ||
+              v.name.includes("In-Joon") ||
+              v.name.includes("Hyunsu") ||
+              v.name.includes("Minho") ||
+              v.name.includes("Seungwoo") ||
+              (v.name.includes("Google") && v.name.includes("Male"))
+          );
+          if (maleKo) return maleKo;
+        } else if (persona === "ko-book-narrator") {
+          // Calm Book Narrator (Natural Neural Voice)
+          const naturalKo = koVoices.find(
+            (v) =>
+              v.name.includes("Natural") ||
+              v.name.includes("SunHi") ||
+              v.name.includes("Google") ||
+              v.name.includes("Yuna")
+          );
+          if (naturalKo) return naturalKo;
+        }
+
+        return koVoices[0] || voices.find((v) => v.lang.startsWith("ko")) || voices[0];
+      } else {
+        // US English native voices
         const usVoices = voices.filter(
           (v) => v.lang === "en-US" || v.lang.startsWith("en_US") || v.lang.startsWith("en-")
         );
@@ -79,7 +133,6 @@ export function useSpeech() {
           if (maleUS) return maleUS;
         }
 
-        // General natural US fallback
         const naturalUS = usVoices.find(
           (v) =>
             v.name.includes("Natural") ||
@@ -90,25 +143,12 @@ export function useSpeech() {
         if (naturalUS) return naturalUS;
 
         return usVoices[0] || voices.find((v) => v.lang.startsWith("en")) || voices[0];
-      } else {
-        // Korean voices
-        const koVoices = voices.filter((v) => v.lang.startsWith("ko"));
-        const naturalKo = koVoices.find(
-          (v) =>
-            v.name.includes("Google") ||
-            v.name.includes("Natural") ||
-            v.name.includes("Yuna") ||
-            v.name.includes("Heami") ||
-            v.name.includes("SunHi")
-        );
-        if (naturalKo) return naturalKo;
-        return koVoices[0] || voices[0];
       }
     },
     []
   );
 
-  // Play a single sentence utterance
+  // Play a single sentence utterance with calibrated announcer cadence
   const speakSentence = useCallback(
     (index: number) => {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -125,7 +165,7 @@ export function useSpeech() {
         return;
       }
 
-      const locale = optionsRef.current.locale || "en";
+      const locale = optionsRef.current.locale || defaultLocale;
       const persona = optionsRef.current.persona || selectedPersona;
       const rate = optionsRef.current.rate || playbackRate;
 
@@ -138,7 +178,19 @@ export function useSpeech() {
 
       utterance.lang = locale === "en" ? "en-US" : "ko-KR";
       utterance.rate = rate;
-      utterance.pitch = locale === "en" && persona === "us-male-executive" ? 0.95 : 1.0;
+
+      // Broadcast announcer pitch tuning
+      if (persona === "ko-female-anchor") {
+        utterance.pitch = 1.02; // Clear, bright broadcast diction
+      } else if (persona === "ko-male-anchor") {
+        utterance.pitch = 0.94; // Deep, calm, authoritative anchor tone
+      } else if (persona === "ko-book-narrator") {
+        utterance.pitch = 0.98; // Warm, steady storytelling tone
+      } else if (persona === "us-male-executive") {
+        utterance.pitch = 0.95;
+      } else {
+        utterance.pitch = 1.0;
+      }
 
       utterance.onstart = () => {
         setIsSpeaking(true);
@@ -149,10 +201,11 @@ export function useSpeech() {
 
       utterance.onend = () => {
         if (!isCancelledRef.current) {
-          // Small natural cadence pause between sentences
+          // Announcer breathing pause between sentences
+          const pauseDuration = persona === "ko-book-narrator" ? 160 : 130;
           setTimeout(() => {
             speakSentence(index + 1);
-          }, 120);
+          }, pauseDuration);
         }
       };
 
@@ -168,12 +221,12 @@ export function useSpeech() {
 
       window.speechSynthesis.speak(utterance);
     },
-    [getBestVoice, playbackRate, selectedPersona]
+    [getBestVoice, playbackRate, selectedPersona, defaultLocale]
   );
 
-  // Primary speak entry point with intelligent chunking
+  // Primary speak entry point with intelligent Korean & English text chunking
   const speak = useCallback(
-    (text: string, options: SpeechOptions | ("ko" | "en") = "en") => {
+    (text: string, options: SpeechOptions | ("ko" | "en") = defaultLocale) => {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
       window.speechSynthesis.cancel();
@@ -186,7 +239,7 @@ export function useSpeech() {
       if (resolvedOptions.persona) setSelectedPersona(resolvedOptions.persona);
       if (resolvedOptions.rate) setPlaybackRate(resolvedOptions.rate);
 
-      // Clean text and split by punctuation (. ! ? ; \n) for uninterrupted chunked streaming
+      // Clean text for natural broadcast enunciation
       const cleaned = text
         .replace(/["""]/g, '"')
         .replace(/[''']/g, "'")
@@ -194,8 +247,10 @@ export function useSpeech() {
         .replace(/\*/g, "")
         .replace(/#/g, "")
         .replace(/—/g, ", ")
+        .replace(/~/g, " ")
         .replace(/\n+/g, ". ");
 
+      // Split sentences cleanly by punctuation (. ! ? ; \n)
       const rawSentences = cleaned.split(/(?<=[.?!;])\s+/);
       const chunks = rawSentences
         .map((s) => s.trim())
@@ -207,7 +262,7 @@ export function useSpeech() {
 
       speakSentence(0);
     },
-    [speakSentence]
+    [speakSentence, defaultLocale]
   );
 
   const stop = useCallback(() => {

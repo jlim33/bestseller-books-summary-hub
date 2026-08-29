@@ -119,30 +119,55 @@ export function DailyBriefingModal({
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
                 <Mic className="w-3.5 h-3.5 text-amber-600" />
-                <span>{isEn ? "US Voice:" : "음성 선택:"}</span>
+                <span>{isEn ? "Voice Persona:" : "보이스 스타일:"}</span>
               </span>
-              <div className="flex items-center gap-1 font-bold text-[10px]">
-                <button
-                  onClick={() => changePersona("us-male-executive")}
-                  className={`px-2 py-1 rounded-lg border transition-all ${
-                    selectedPersona === "us-male-executive"
-                      ? "bg-amber-600 text-white border-amber-600"
-                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                  }`}
-                >
-                  Executive
-                </button>
-                <button
-                  onClick={() => changePersona("us-female-anchor")}
-                  className={`px-2 py-1 rounded-lg border transition-all ${
-                    selectedPersona === "us-female-anchor"
-                      ? "bg-amber-600 text-white border-amber-600"
-                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                  }`}
-                >
-                  Anchor
-                </button>
-              </div>
+              {isEn ? (
+                <div className="flex items-center gap-1 font-bold text-[10px]">
+                  <button
+                    onClick={() => changePersona("us-male-executive")}
+                    className={`px-2 py-1 rounded-lg border transition-all ${
+                      selectedPersona === "us-male-executive"
+                        ? "bg-amber-600 text-white border-amber-600"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    Executive
+                  </button>
+                  <button
+                    onClick={() => changePersona("us-female-anchor")}
+                    className={`px-2 py-1 rounded-lg border transition-all ${
+                      selectedPersona === "us-female-anchor"
+                        ? "bg-amber-600 text-white border-amber-600"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    Anchor
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 font-bold text-[10px]">
+                  <button
+                    onClick={() => changePersona("ko-female-anchor")}
+                    className={`px-2 py-1 rounded-lg border transition-all ${
+                      selectedPersona === "ko-female-anchor"
+                        ? "bg-amber-600 text-white border-amber-600"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    🎙️ 여성 아나운서
+                  </button>
+                  <button
+                    onClick={() => changePersona("ko-male-anchor")}
+                    className={`px-2 py-1 rounded-lg border transition-all ${
+                      selectedPersona === "ko-male-anchor"
+                        ? "bg-amber-600 text-white border-amber-600"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    🎙️ 남성 앵커
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-1 font-mono font-bold text-[10px]">
@@ -150,7 +175,7 @@ export function DailyBriefingModal({
                 <Gauge className="w-3 h-3 text-slate-400" />
                 {isEn ? "Speed:" : "배속:"}
               </span>
-              {[0.9, 1.0, 1.15, 1.3].map((r) => (
+              {[0.9, 0.98, 1.15, 1.3].map((r) => (
                 <button
                   key={r}
                   onClick={() => changeRate(r)}
@@ -160,7 +185,7 @@ export function DailyBriefingModal({
                       : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
                   }`}
                 >
-                  {r}x
+                  {r === 0.98 ? "1.0x" : `${r}x`}
                 </button>
               ))}
             </div>

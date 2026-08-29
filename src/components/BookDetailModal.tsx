@@ -263,7 +263,7 @@ export function BookDetailModal({
               </div>
             </div>
 
-            {/* US Native Voice Broadcast & Audiobook Mode */}
+            {/* Voice Broadcast & Audiobook Mode */}
             <div className="space-y-2">
               
               {/* 1. Read Current Chapter Button */}
@@ -287,7 +287,7 @@ export function BookDetailModal({
                         : `챕터 ${activeChapterIndex + 1} 낭독 중 (${currentSentenceIndex}/${totalSentences}) • 정지`)
                     : (isEn
                         ? `🎙️ Read Chapter ${activeChapterIndex + 1} (US Voice)`
-                        : `🎙️ 챕터 ${activeChapterIndex + 1} 미국 음성 낭독`)}
+                        : `🎙️ 챕터 ${activeChapterIndex + 1} 아나운서 음성 낭독`)}
                 </span>
               </button>
 
@@ -313,36 +313,74 @@ export function BookDetailModal({
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
                   <span className="flex items-center gap-1">
                     <Mic className="w-3.5 h-3.5 text-amber-600" />
-                    <span>{isEn ? "US Voice Persona:" : "미국 네이티브 보이스:"}</span>
+                    <span>{isEn ? "Voice Persona:" : "전문 보이스 스타일:"}</span>
                   </span>
-                  <span className="text-[10px] text-amber-700 dark:text-amber-400 font-mono">
+                  <span className="text-[10px] text-amber-700 dark:text-amber-400 font-mono truncate max-w-[130px]">
                     {activeVoiceName.replace("Microsoft ", "").replace("Google ", "")}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
-                  <button
-                    onClick={() => changePersona("us-male-executive")}
-                    className={`p-1.5 rounded-xl border text-center transition-all ${
-                      selectedPersona === "us-male-executive"
-                        ? "bg-amber-600 text-white border-amber-600 shadow-xs"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    🇺🇸 US Executive
-                  </button>
+                {/* Persona Switchers */}
+                {isEn ? (
+                  <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
+                    <button
+                      onClick={() => changePersona("us-male-executive")}
+                      className={`p-1.5 rounded-xl border text-center transition-all ${
+                        selectedPersona === "us-male-executive"
+                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                      }`}
+                    >
+                      🇺🇸 US Executive
+                    </button>
 
-                  <button
-                    onClick={() => changePersona("us-female-anchor")}
-                    className={`p-1.5 rounded-xl border text-center transition-all ${
-                      selectedPersona === "us-female-anchor"
-                        ? "bg-amber-600 text-white border-amber-600 shadow-xs"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    🇺🇸 US Anchor
-                  </button>
-                </div>
+                    <button
+                      onClick={() => changePersona("us-female-anchor")}
+                      className={`p-1.5 rounded-xl border text-center transition-all ${
+                        selectedPersona === "us-female-anchor"
+                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                      }`}
+                    >
+                      🇺🇸 US Anchor
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1 text-[10px] font-bold">
+                    <button
+                      onClick={() => changePersona("ko-female-anchor")}
+                      className={`p-1.5 rounded-xl border text-center transition-all ${
+                        selectedPersona === "ko-female-anchor"
+                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                      }`}
+                    >
+                      🎙️ 여성 아나운서
+                    </button>
+
+                    <button
+                      onClick={() => changePersona("ko-male-anchor")}
+                      className={`p-1.5 rounded-xl border text-center transition-all ${
+                        selectedPersona === "ko-male-anchor"
+                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                      }`}
+                    >
+                      🎙️ 남성 앵커
+                    </button>
+
+                    <button
+                      onClick={() => changePersona("ko-book-narrator")}
+                      className={`p-1.5 rounded-xl border text-center transition-all ${
+                        selectedPersona === "ko-book-narrator"
+                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                      }`}
+                    >
+                      📖 북 내레이터
+                    </button>
+                  </div>
+                )}
 
                 {/* Playback Speed Controls */}
                 <div className="flex items-center justify-between pt-1 text-[10px]">
@@ -351,7 +389,7 @@ export function BookDetailModal({
                     {isEn ? "Speed:" : "배속:"}
                   </span>
                   <div className="flex items-center gap-1 font-mono font-bold">
-                    {[0.9, 1.0, 1.15, 1.3].map((r) => (
+                    {[0.9, 0.98, 1.15, 1.3].map((r) => (
                       <button
                         key={r}
                         onClick={() => changeRate(r)}
@@ -361,7 +399,7 @@ export function BookDetailModal({
                             : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
                         }`}
                       >
-                        {r}x
+                        {r === 0.98 ? "1.0x" : `${r}x`}
                       </button>
                     ))}
                   </div>
