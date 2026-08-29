@@ -6,7 +6,8 @@ export interface AudioTrack {
   categoryLabel: string;
   genreEn: string;
   genreKo: string;
-  src: string;
+  src?: string;
+  isSynth?: boolean;
   duration?: string;
   icon?: string;
 }
@@ -26,31 +27,23 @@ export const MUSIC_GENRES: MusicGenre[] = [
     labelEn: "All Genres",
     labelKo: "전체 장르",
     icon: "LayoutGrid",
-    descriptionEn: "Continuous stream across all curated reading genres",
-    descriptionKo: "클래식, 샹송, 528Hz 명상 및 자연음 전곡 연속 재생",
+    descriptionEn: "Complete continuous stream across Bach, Vivaldi, Chopin, 528Hz & Nature",
+    descriptionKo: "바흐, 비발디, 쇼팽, 528Hz 명상 및 자연음 전곡 연속 재생",
   },
   {
     id: "classical",
-    labelEn: "Classical Piano & Strings",
-    labelKo: "클래식 피아노 & 현악",
+    labelEn: "Bach, Vivaldi & Chopin",
+    labelKo: "바흐 & 비발디 & 쇼팽 클래식",
     icon: "Music",
-    descriptionEn: "Chopin, Bach, and Satie for timeless cognitive focus",
-    descriptionKo: "쇼팽 녹턴, 바흐 현악, 에릭 사티 피아노 선율",
-  },
-  {
-    id: "chanson",
-    labelEn: "Parisian Chanson & Cafe",
-    labelKo: "북카페 & 파리지앵 샹송",
-    icon: "Coffee",
-    descriptionEn: "Warm French accordion & acoustic cafe guitar",
-    descriptionKo: "파리 서점 감성의 따스한 아코디언과 어쿠스틱 기타",
+    descriptionEn: "J.S. Bach suites, Vivaldi Four Seasons & Chopin Nocturnes",
+    descriptionKo: "바흐 G선상의 아리아/무반주 첼로, 비발디 사계 봄/겨울, 쇼팽 녹턴",
   },
   {
     id: "meditation",
     labelEn: "528Hz Alpha Meditation",
     labelKo: "528Hz 딥포커스 명상",
     icon: "Sparkles",
-    descriptionEn: "Solfeggio frequencies & Tibetan singing bowls",
+    descriptionEn: "Solfeggio cognitive frequencies & Tibetan singing bowls",
     descriptionKo: "528Hz 뇌파 동기화 주파수와 싱잉볼 이완 사운드",
   },
   {
@@ -64,71 +57,121 @@ export const MUSIC_GENRES: MusicGenre[] = [
 ];
 
 export const READING_AUDIO_TRACKS: AudioTrack[] = [
-  // 1. Classical Piano & Strings
+  // 1. J.S. Bach Masterpieces
   {
-    id: "read-chopin-nocturne",
-    title: "Chopin - Nocturne in E-flat major, Op. 9 No. 2",
-    artist: "Reading Lounge Classical Piano",
+    id: "synth-bach-air",
+    title: "Bach - Air on the G String (BWV 1068)",
+    artist: "J.S. Bach (Chamber Strings Ensemble)",
     category: "classical",
-    categoryLabel: "클래식 피아노 🎹",
-    genreEn: "Classical",
-    genreKo: "클래식",
-    src: "https://cdn.pixabay.com/download/audio/2022/05/16/audio_db6591201e.mp3?filename=chopin-nocturne-op-9-no-2-110829.mp3",
+    categoryLabel: "바흐 현악 🎻",
+    genreEn: "Bach & Vivaldi",
+    genreKo: "바흐 & 비발디",
+    isSynth: true,
+    duration: "3:45",
+    icon: "Music"
+  },
+  {
+    id: "synth-bach-cello",
+    title: "Bach - Cello Suite No. 1 in G major (Prelude)",
+    artist: "J.S. Bach (Deep Cello Resonance)",
+    category: "classical",
+    categoryLabel: "바흐 첼로 🎻",
+    genreEn: "Bach & Vivaldi",
+    genreKo: "바흐 & 비발디",
+    isSynth: true,
+    duration: "2:50",
+    icon: "Music"
+  },
+  {
+    id: "synth-bach-goldberg",
+    title: "Bach - Goldberg Variations: Aria (BWV 988)",
+    artist: "J.S. Bach (Acoustic Grand Piano)",
+    category: "classical",
+    categoryLabel: "바흐 골드베르크 🎹",
+    genreEn: "Bach & Vivaldi",
+    genreKo: "바흐 & 비발디",
+    isSynth: true,
+    duration: "3:10",
+    icon: "Music"
+  },
+  {
+    id: "synth-bach-minuet",
+    title: "Bach - Minuet in G major (BWV Anh. 114)",
+    artist: "J.S. Bach (Baroque Piano)",
+    category: "classical",
+    categoryLabel: "바흐 미뉴에트 🎹",
+    genreEn: "Bach & Vivaldi",
+    genreKo: "바흐 & 비발디",
+    isSynth: true,
+    duration: "2:15",
+    icon: "Music"
+  },
+
+  // 2. Antonio Vivaldi Masterpieces (The Four Seasons)
+  {
+    id: "synth-vivaldi-spring",
+    title: "Vivaldi - Four Seasons: Spring (La Primavera - Allegro)",
+    artist: "Antonio Vivaldi (Baroque Strings)",
+    category: "classical",
+    categoryLabel: "비발디 사계 봄 🌸",
+    genreEn: "Bach & Vivaldi",
+    genreKo: "바흐 & 비발디",
+    isSynth: true,
+    duration: "3:20",
+    icon: "Music"
+  },
+  {
+    id: "synth-vivaldi-winter",
+    title: "Vivaldi - Four Seasons: Winter (L'Inverno - Largo)",
+    artist: "Antonio Vivaldi (Peaceful Chamber Strings)",
+    category: "classical",
+    categoryLabel: "비발디 사계 겨울 ❄️",
+    genreEn: "Bach & Vivaldi",
+    genreKo: "바흐 & 비발디",
+    isSynth: true,
+    duration: "2:45",
+    icon: "Music"
+  },
+  {
+    id: "synth-vivaldi-summer",
+    title: "Vivaldi - Four Seasons: Summer (L'Estate - Storm Presto)",
+    artist: "Antonio Vivaldi (Dynamic Strings)",
+    category: "classical",
+    categoryLabel: "비발디 사계 여름 ⚡",
+    genreEn: "Bach & Vivaldi",
+    genreKo: "바흐 & 비발디",
+    isSynth: true,
+    duration: "2:30",
+    icon: "Music"
+  },
+
+  // 3. Chopin & Satie Masterpieces
+  {
+    id: "synth-chopin-nocturne",
+    title: "Chopin - Nocturne in E-flat major, Op. 9 No. 2",
+    artist: "Frederic Chopin (Classical Piano Lounge)",
+    category: "classical",
+    categoryLabel: "쇼팽 녹턴 🎹",
+    genreEn: "Classical Piano",
+    genreKo: "클래식 피아노",
+    isSynth: true,
     duration: "4:32",
     icon: "Music"
   },
   {
-    id: "read-bach-goldberg",
-    title: "Bach - Air on the G String (Orchestral Suite)",
-    artist: "Chamber Strings Ensemble",
-    category: "classical",
-    categoryLabel: "클래식 현악 🎻",
-    genreEn: "Classical",
-    genreKo: "클래식",
-    src: "https://cdn.pixabay.com/download/audio/2022/03/24/audio_341bbec7bb.mp3?filename=bach-air-on-the-g-string-orchestral-suite-no-3-in-d-major-bwv-1068-105151.mp3",
-    duration: "4:15",
-    icon: "Music"
-  },
-  {
-    id: "read-satie-gymnopedie",
+    id: "synth-satie-gymnopedie",
     title: "Erik Satie - Gymnopédie No. 1",
-    artist: "Minimal Classical Solo",
+    artist: "Erik Satie (Calm Ambient Solo)",
     category: "classical",
-    categoryLabel: "미니멀 클래식 🎹",
-    genreEn: "Classical",
-    genreKo: "클래식",
-    src: "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=gymnopedie-no-1-10557.mp3",
+    categoryLabel: "사티 짐노페디 🎹",
+    genreEn: "Classical Piano",
+    genreKo: "클래식 피아노",
+    isSynth: true,
     duration: "3:40",
     icon: "Music"
   },
 
-  // 2. Parisian Chanson & Acoustic Cafe
-  {
-    id: "read-chanson-cafe",
-    title: "Breeze of Paris (Bookstore Cafe Chanson)",
-    artist: "Parisian Library Accordion",
-    category: "chanson",
-    categoryLabel: "북카페 샹송 ☕",
-    genreEn: "Chanson & Cafe",
-    genreKo: "샹송 & 북카페",
-    src: "https://cdn.pixabay.com/download/audio/2022/10/14/audio_9939f792cb.mp3?filename=french-accordion-chanson-122941.mp3",
-    duration: "3:10",
-    icon: "Coffee"
-  },
-  {
-    id: "read-acoustic-guitar",
-    title: "Montmartre Sunset (Warm Acoustic Guitar)",
-    artist: "Acoustic Cafe Trio",
-    category: "chanson",
-    categoryLabel: "어쿠스틱 카페 🎸",
-    genreEn: "Chanson & Cafe",
-    genreKo: "샹송 & 북카페",
-    src: "https://cdn.pixabay.com/download/audio/2023/04/18/audio_d46429f52a.mp3?filename=french-cafe-acoustic-146603.mp3",
-    duration: "3:25",
-    icon: "Coffee"
-  },
-
-  // 3. 528Hz Alpha Brainwave Meditation & Deep Focus
+  // 4. 528Hz Alpha Brainwave Meditation & Deep Focus
   {
     id: "read-528hz-deepfocus",
     title: "528Hz Alpha Brainwave Deep Reading Focus",
@@ -137,24 +180,12 @@ export const READING_AUDIO_TRACKS: AudioTrack[] = [
     categoryLabel: "528Hz 몰입 독서 🧘",
     genreEn: "528Hz Meditation",
     genreKo: "528Hz 명상",
-    src: "https://cdn.pixabay.com/download/audio/2022/11/06/audio_c97693998b.mp3?filename=528hz-healing-meditation-125867.mp3",
+    isSynth: false,
     duration: "5:00",
     icon: "Sparkles"
   },
-  {
-    id: "read-tibetan-zen",
-    title: "Tibetan Singing Bowl & Zen Breath",
-    artist: "Himalayan Zen Master",
-    category: "meditation",
-    categoryLabel: "싱잉볼 이완 🌿",
-    genreEn: "528Hz Meditation",
-    genreKo: "528Hz 명상",
-    src: "https://cdn.pixabay.com/download/audio/2022/01/26/audio_d0c6ff1e01.mp3?filename=tibetan-singing-bowl-meditation-10940.mp3",
-    duration: "4:45",
-    icon: "Sparkles"
-  },
 
-  // 4. Nature & Rain Sanctuary
+  // 5. Nature & Rain Sanctuary
   {
     id: "read-library-rain",
     title: "Gentle Rain on Library Windowpane",
@@ -163,7 +194,7 @@ export const READING_AUDIO_TRACKS: AudioTrack[] = [
     categoryLabel: "도서관 빗소리 🌧️",
     genreEn: "Nature Sounds",
     genreKo: "자연 빗소리",
-    src: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=soft-rain-ambient-111154.mp3",
+    isSynth: false,
     duration: "6:10",
     icon: "CloudRain"
   },
@@ -175,7 +206,7 @@ export const READING_AUDIO_TRACKS: AudioTrack[] = [
     categoryLabel: "온화한 파도소리 🌊",
     genreEn: "Nature Sounds",
     genreKo: "자연 파도소리",
-    src: "https://cdn.pixabay.com/download/audio/2021/09/06/audio_82315b9468.mp3?filename=ocean-waves-ambient-8247.mp3",
+    isSynth: false,
     duration: "5:30",
     icon: "CloudRain"
   }
