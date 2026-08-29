@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { READING_AUDIO_TRACKS, MUSIC_GENRES, AudioTrack, MusicGenre } from "@/lib/audioTracks";
-import { ClassicalAudioSynthesizer } from "@/lib/classicalSynthesizer";
 
 const VOLUME_STORAGE_KEY = "bookpulse_bgm_volume_v1";
 
@@ -15,7 +14,6 @@ export function useReadingAudio() {
   const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const synthRef = useRef<ClassicalAudioSynthesizer | null>(null);
   const currentTrackRef = useRef<AudioTrack>(currentTrack);
   const isShuffleRef = useRef<boolean>(isShuffle);
   const autoAdvanceRef = useRef<boolean>(autoAdvance);
@@ -38,53 +36,28 @@ export function useReadingAudio() {
     activeTracksRef.current = activeTracks;
   }, [currentTrack, isShuffle, autoAdvance, volume, isMuted, activeTracks]);
 
-  // Forward declaration for sequencing
   const selectNextTrackRef = useRef<() => void>(() => {});
 
   const playTrack = useCallback((track: AudioTrack) => {
+    if (!audioRef.current) return;
     setCurrentTrack(track);
     currentTrackRef.current = track;
-    setIsLoading(false);
+    setIsLoading(true);
 
-    if (track.isSynth) {
-      // Stop HTML5 audio if playing
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      // Play procedural classical synthesizer
-      if (!synthRef.current) {
-        synthRef.current = new ClassicalAudioSynthesizer();
-      }
-      synthRef.current.setVolume(isMutedRef.current ? 0 : volumeRef.current);
-      synthRef.current.playTrack(track.id, () => {
-        if (autoAdvanceRef.current) {
-          selectNextTrackRef.current();
-        }
+    audioRef.current.src = track.src;
+    audioRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
+
+    audioRef.current
+      .play()
+      .then(() => {
+        setIsPlaying(true);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.warn("Studio audio play notice:", err);
+        setIsLoading(false);
+        setIsPlaying(false);
       });
-      setIsPlaying(true);
-    } else {
-      // Stop synthesizer if playing
-      if (synthRef.current) {
-        synthRef.current.stop();
-      }
-      if (audioRef.current && track.src) {
-        setIsLoading(true);
-        audioRef.current.src = track.src;
-        audioRef.current
-          .play()
-          .then(() => {
-            setIsPlaying(true);
-            setIsLoading(false);
-          })
-          .catch((err) => {
-            console.warn("Audio stream playback notice:", err);
-            setIsLoading(false);
-            if (autoAdvanceRef.current) {
-              setTimeout(() => selectNextTrackRef.current(), 1000);
-            }
-          });
-      }
-    }
   }, []);
 
   const selectNextTrack = useCallback(() => {
@@ -130,9 +103,6 @@ export function useReadingAudio() {
       } catch {}
       setVolumeState(savedVol);
 
-      synthRef.current = new ClassicalAudioSynthesizer();
-      synthRef.current.setVolume(savedVol);
-
       const audio = new Audio();
       audio.loop = false;
       audio.volume = savedVol;
@@ -143,15 +113,11 @@ export function useReadingAudio() {
         setIsLoading(false);
         setIsPlaying(true);
       };
-      audio.onpause = () => {
-        if (!synthRef.current?.getIsPlaying()) {
-          setIsPlaying(false);
-        }
-      };
+      audio.onpause = () => setIsPlaying(false);
       audio.onerror = () => {
         setIsLoading(false);
         if (autoAdvanceRef.current) {
-          setTimeout(() => selectNextTrackRef.current(), 1500);
+          setTimeout(() => selectNextTrackRef.current(), 1200);
         }
       };
       audio.onended = () => {
@@ -163,25 +129,33 @@ export function useReadingAudio() {
       return () => {
         audio.pause();
         audio.src = "";
-        if (synthRef.current) {
-          synthRef.current.stop();
-        }
       };
     }
   }, []);
 
   const togglePlay = useCallback(() => {
+    if (!audioRef.current) return;
     if (isPlaying) {
-      if (currentTrack.isSynth && synthRef.current) {
-        synthRef.current.stop();
-      } else if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      playTrack(currentTrack);
+      if (!audioRef.current.src || audioRef.current.src === "") {
+        audioRef.current.src = currentTrack.src;
+      }
+      setIsLoading(true);
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.warn("Audio play error:", err);
+          setIsLoading(false);
+          setIsPlaying(false);
+        });
     }
-  }, [isPlaying, currentTrack, playTrack]);
+  }, [isPlaying, currentTrack]);
 
   const setVolume = useCallback((val: number) => {
     const clamped = Math.max(0, Math.min(1, val));
@@ -192,20 +166,16 @@ export function useReadingAudio() {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : clamped;
     }
-    if (synthRef.current) {
-      synthRef.current.setVolume(isMuted ? 0 : clamped);
-    }
   }, [isMuted]);
 
   const toggleMute = useCallback(() => {
+    if (!audioRef.current) return;
     if (isMuted) {
       setIsMuted(false);
-      if (audioRef.current) audioRef.current.volume = volume;
-      if (synthRef.current) synthRef.current.setVolume(volume);
+      audioRef.current.volume = volume;
     } else {
       setIsMuted(true);
-      if (audioRef.current) audioRef.current.volume = 0;
-      if (synthRef.current) synthRef.current.setVolume(0);
+      audioRef.current.volume = 0;
     }
   }, [isMuted, volume]);
 
