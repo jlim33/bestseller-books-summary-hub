@@ -1,181 +1,155 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Sparkles, Send, Copy, Download, Check, Mail, Leaf, BookOpen } from "lucide-react";
-import { NewsArticle } from "@/lib/types";
-import { formatHealthLongevityReport } from "@/lib/aiSummarizer";
+import {
+  X,
+  Sparkles,
+  Volume2,
+  VolumeX,
+  BookOpen,
+  CheckCircle2,
+  Copy,
+  Clock,
+  Layers,
+  ArrowRight
+} from "lucide-react";
+import { BookItem } from "@/lib/types";
+import { useSpeech } from "@/hooks/useSpeech";
 
 interface DailyBriefingModalProps {
-  isOpen: boolean;
+  books: BookItem[];
   onClose: () => void;
-  articles: NewsArticle[];
   locale?: "ko" | "en";
+  onSelectBook: (book: BookItem) => void;
 }
 
 export function DailyBriefingModal({
-  isOpen,
+  books,
   onClose,
-  articles,
   locale = "ko",
+  onSelectBook,
 }: DailyBriefingModalProps) {
-  const [email, setEmail] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [isSent, setIsSent] = useState(false);
-  const [copied, setCopied] = useState(false);
   const isEn = locale === "en";
+  const { speak, stop, isSpeaking } = useSpeech();
+  const [copied, setCopied] = useState(false);
 
-  if (!isOpen) return null;
-
-  const briefingText = formatHealthLongevityReport(articles, isEn ? "en" : "ko");
+  const digestContent = isEn
+    ? `Executive 5-Minute Cross-Disciplinary Book Digest:
+1. AI & IT (Life 3.0): Life evolves from biological (1.0) to cultural (2.0) and technological (3.0). Value alignment is humanity's highest priority.
+2. Chip War: Advanced semiconductors are the geopolitical bedrock of power; lithography chokepoints determine the world order.
+3. Science (A Brief History of Time): Spacetime is dynamic and curved; black holes evaporate via quantum radiation.
+4. Philosophy (Meditations): Control what is within your power and love your fate (Amor Fati). What stands in the way becomes the way.
+5. Mathematics (Infinite Powers): Calculus unlocks continuous reality by analyzing infinitesimal slices to predict the universe and power AI.
+6. Health (Outlive): Prevent chronic diseases 30 years before onset via Zone 2 cardio, muscle mass, and optimal metabolic biomarkers.
+7. Habits (Atomic Habits): 1% daily marginal gains compound into 37x annual improvement. Systems determine outcomes.`
+    : `오늘의 5대 분야 글로벌 명저 핵심 요약 다이제스트:
+1. AI & IT (라이프 3.0): 생명은 생물학(1.0)과 인간(2.0)을 넘어 스스로 신체와 지능을 재설계하는 AGI(3.0)로 진화합니다. 가치 정렬이 최우선 과제입니다.
+2. 반도체 (칩워): 현대 패권의 핵심은 석유가 아닌 실리콘 칩이며, 나노미터 공급망을 쥐는 자가 세계를 지배합니다.
+3. 과학 (시간의 역사): 시공간은 고정된 무대가 아닌 역동적 기하학이며, 블랙홀은 호킹 복사로 증발합니다.
+4. 철학 (명상록): 통제할 수 없는 외부 사건에 연연하지 말고 내면의 판단을 다스리십시오. 장애물이 곧 길이 됩니다.
+5. 수학 (미적분의 힘): 복잡한 문제를 무한히 잘게 쪼개어 분석하는 미적분이 인공지능과 우주 물리학을 가능케 했습니다.
+6. 건강 (아웃리브): 질병이 생기기 30년 전부터 Zone 2 유산소 운동과 근육량 저축으로 건강수명을 지키십시오.
+7. 습관 (아주 작은 습관의 힘): 매일 1%의 개선이 1년 후 37배의 복리 성장을 만듭니다. 목표 대신 시스템에 집중하십시오.`;
 
   const handleCopy = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(briefingText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    navigator.clipboard.writeText(digestContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([briefingText], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = isEn
-      ? `VitaPulse-Clinical-Wellness-Report-${new Date().toISOString().slice(0, 10)}.md`
-      : `비타펄스-일일건강리포트-${new Date().toISOString().slice(0, 10)}.md`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleSendEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !email.includes("@")) return;
-
-    setIsSending(true);
-    try {
-      const res = await fetch("https://formspree.io/f/mqakvjbl", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          email,
-          subject: isEn ? `[VitaPulse] Daily Clinical Longevity & Wellness Report` : `[비타펄스] 일일 근거 기반 건강 & 장수 리포트`,
-          message: briefingText,
-        }),
-      });
-
-      if (res.ok) {
-        setIsSent(true);
-        setTimeout(() => setIsSent(false), 3500);
-        setEmail("");
-      } else {
-        alert(isEn ? "Report generated! You can copy or download markdown directly." : "리포트가 생성되었습니다! 클립보드 복사나 다운로드를 이용해주세요.");
-      }
-    } catch {
-      setIsSent(true);
-    } finally {
-      setIsSending(false);
+  const handleListen = () => {
+    if (isSpeaking) {
+      stop();
+    } else {
+      speak(digestContent, isEn ? "en" : "ko");
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/65 backdrop-blur-md overflow-y-auto">
-      <div
-        className="relative w-full max-w-2xl rounded-3xl bg-white dark:bg-slate-900 border border-sage-200/80 dark:border-slate-800 shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl bg-white dark:bg-slate-900 border border-amber-500/40 shadow-2xl overflow-hidden">
+        
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-sage-100 dark:border-slate-800 bg-sage-50/70 dark:bg-sage-950/30">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-amber-50/70 dark:bg-slate-850">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-r from-sage-600 to-emerald-600 text-white shadow-md">
-              <Leaf className="w-5 h-5" />
+            <div className="p-2 rounded-xl bg-amber-600 text-white shadow-md shadow-amber-500/20">
+              <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-base text-slate-900 dark:text-white">
-                {isEn ? "Daily Clinical Longevity & Wellness Report" : "일일 근거 기반 건강 & 웰빙 리포트"}
+              <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
+                {isEn ? "Daily 5-Minute Executive Book Digest" : "오늘의 5분 명저 총괄 브리핑"}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {isEn ? "Peer-reviewed summaries from The Lancet, Nature Medicine & Harvard Health" : "세계 주요 의학 저널 최신 논문 핵심 요약 및 일일 가이드 자동 종합"}
+              <p className="text-[11px] text-slate-400">
+                {isEn ? "Cross-disciplinary synthesis across AI, Science, Philosophy & Longevity" : "AI, 과학, 철학, 수학, 의학, 습관 6대 분야 핵심 정수"}
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl border border-sage-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:bg-slate-100 text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 sm:p-8 space-y-5 max-h-[72vh] overflow-y-auto">
+        {/* Content Body */}
+        <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs sm:text-sm">
           
-          {/* Email Subscription Bar */}
-          <form onSubmit={handleSendEmail} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-sage-200/80 dark:border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Mail className="w-4 h-4 text-sage-600" />
-                {isEn ? "Dispatch Daily Health Report to Email:" : "이메일로 일일 리포트 즉시 수신:"}
-              </span>
-              <span className="text-[11px] text-sage-600 font-medium">Free Clinical Dispatch</span>
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={isEn ? "doctor@hospital.org" : "받으실 이메일 주소를 입력하세요..."}
-                className="flex-1 px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-sage-500"
-              />
-              <button
-                type="submit"
-                disabled={isSending}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-sage-600 to-emerald-600 hover:from-sage-500 hover:to-emerald-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 shrink-0"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>{isSending ? (isEn ? "Dispatching..." : "전송 중...") : isEn ? "Send" : "전송"}</span>
-              </button>
-            </div>
-
-            {isSent && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                <Check className="w-4 h-4" />
-                {isEn ? "Daily Longevity Report has been dispatched to your inbox!" : "일일 건강 리포트가 이메일로 발송되었습니다!"}
-              </p>
-            )}
-          </form>
-
-          {/* Markdown Preview */}
-          <div className="relative">
-            <pre className="w-full p-4 rounded-2xl bg-slate-950 text-sage-300 font-mono text-xs leading-relaxed overflow-x-auto border border-slate-800 max-h-[300px] whitespace-pre-wrap select-all">
-              {briefingText}
-            </pre>
+          <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-slate-850 border border-amber-200/60 dark:border-slate-800 font-mono leading-relaxed whitespace-pre-line text-slate-800 dark:text-slate-200">
+            {digestContent}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-sage-50 dark:hover:bg-sage-950 text-slate-700 dark:text-slate-300 hover:text-sage-600 text-xs font-bold border border-slate-200 dark:border-slate-700 transition-all"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? (isEn ? "Copied!" : "복사 완료!") : isEn ? "Copy Markdown" : "마크다운 복사"}</span>
-            </button>
-
-            <button
-              onClick={handleDownload}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-sage-50 dark:hover:bg-sage-950 text-slate-700 dark:text-slate-300 hover:text-sage-600 text-xs font-bold border border-slate-200 dark:border-slate-700 transition-all"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{isEn ? "Download (.md)" : "파일로 다운로드"}</span>
-            </button>
+          {/* Quick Book Pick List */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+              {isEn ? "Jump into Book Summaries:" : "원하는 도서 챕터 바로 읽기:"}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {books.map((b) => (
+                <button
+                  key={b.id}
+                  onClick={() => {
+                    onClose();
+                    onSelectBook(b);
+                  }}
+                  className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-left transition-all flex items-center justify-between gap-2"
+                >
+                  <span className="font-bold text-xs truncate">{b.title}</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                </button>
+              ))}
+            </div>
           </div>
 
         </div>
+
+        {/* Footer Actions */}
+        <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between gap-2">
+          <button
+            onClick={handleListen}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              isSpeaking
+                ? "bg-rose-600 text-white animate-pulse"
+                : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-100"
+            }`}
+          >
+            {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            <span>{isSpeaking ? (isEn ? "Stop Audio" : "오디오 정지") : (isEn ? "Listen to Digest" : "음성 다이제스트 듣기")}</span>
+          </button>
+
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-all"
+          >
+            {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            <span>{copied ? (isEn ? "Copied!" : "복사 완료!") : (isEn ? "Copy Digest" : "텍스트 복사")}</span>
+          </button>
+        </div>
+
       </div>
+
     </div>
   );
 }

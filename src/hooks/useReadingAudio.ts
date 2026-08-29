@@ -1,16 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { RELAXING_AUDIO_TRACKS } from "@/lib/audioTracks";
+import { READING_AUDIO_TRACKS } from "@/lib/audioTracks";
 import { AudioTrack } from "@/lib/types";
-import { getStoredVolume, setStoredVolume } from "@/lib/storage";
 
-export function useHealingAudio() {
+const VOLUME_STORAGE_KEY = "bookpulse_bgm_volume_v1";
+
+export function useReadingAudio() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentTrack, setCurrentTrack] = useState<AudioTrack>(RELAXING_AUDIO_TRACKS[0]);
+  const [currentTrack, setCurrentTrack] = useState<AudioTrack>(READING_AUDIO_TRACKS[0]);
   const [volume, setVolumeState] = useState<number>(0.35);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
-  const [autoAdvance, setAutoAdvance] = useState<boolean>(true); // Continuous play to next songs
+  const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentTrackRef = useRef<AudioTrack>(currentTrack);
@@ -46,7 +47,7 @@ export function useHealingAudio() {
         setIsLoading(false);
       })
       .catch((err) => {
-        console.warn("Audio auto-play policy or network issue:", err);
+        console.warn("Reading audio playback notice:", err);
         setIsLoading(false);
         setIsPlaying(false);
       });
@@ -54,28 +55,32 @@ export function useHealingAudio() {
 
   const selectNextTrack = useCallback(() => {
     if (isShuffleRef.current) {
-      const randomIndex = Math.floor(Math.random() * RELAXING_AUDIO_TRACKS.length);
-      playTrack(RELAXING_AUDIO_TRACKS[randomIndex]);
+      const randomIndex = Math.floor(Math.random() * READING_AUDIO_TRACKS.length);
+      playTrack(READING_AUDIO_TRACKS[randomIndex]);
     } else {
-      const currentIndex = RELAXING_AUDIO_TRACKS.findIndex((t) => t.id === currentTrackRef.current.id);
-      const nextIndex = (currentIndex + 1) % RELAXING_AUDIO_TRACKS.length;
-      playTrack(RELAXING_AUDIO_TRACKS[nextIndex]);
+      const currentIndex = READING_AUDIO_TRACKS.findIndex((t) => t.id === currentTrackRef.current.id);
+      const nextIndex = (currentIndex + 1) % READING_AUDIO_TRACKS.length;
+      playTrack(READING_AUDIO_TRACKS[nextIndex]);
     }
   }, [playTrack]);
 
   const selectPrevTrack = useCallback(() => {
-    const currentIndex = RELAXING_AUDIO_TRACKS.findIndex((t) => t.id === currentTrackRef.current.id);
-    const prevIndex = (currentIndex - 1 + RELAXING_AUDIO_TRACKS.length) % RELAXING_AUDIO_TRACKS.length;
-    playTrack(RELAXING_AUDIO_TRACKS[prevIndex]);
+    const currentIndex = READING_AUDIO_TRACKS.findIndex((t) => t.id === currentTrackRef.current.id);
+    const prevIndex = (currentIndex - 1 + READING_AUDIO_TRACKS.length) % READING_AUDIO_TRACKS.length;
+    playTrack(READING_AUDIO_TRACKS[prevIndex]);
   }, [playTrack]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedVol = getStoredVolume();
+      let savedVol = 0.35;
+      try {
+        const raw = localStorage.getItem(VOLUME_STORAGE_KEY);
+        if (raw) savedVol = parseFloat(raw);
+      } catch {}
       setVolumeState(savedVol);
 
       const audio = new Audio();
-      audio.loop = false; // Disable single song loop so it auto-advances to next song
+      audio.loop = false;
       audio.volume = savedVol;
       audioRef.current = audio;
 
@@ -85,10 +90,8 @@ export function useHealingAudio() {
         setIsPlaying(true);
       };
       audio.onpause = () => setIsPlaying(false);
-      audio.onerror = (e) => {
-        console.warn("Audio playback error, auto-advancing to next track:", e);
+      audio.onerror = () => {
         setIsLoading(false);
-        // If track fails or network drops, auto skip to next available track
         if (autoAdvanceRef.current) {
           setTimeout(() => {
             selectNextTrack();
@@ -96,7 +99,6 @@ export function useHealingAudio() {
         }
       };
 
-      // Seamless auto-transition to next track when current song finishes
       audio.onended = () => {
         if (autoAdvanceRef.current) {
           selectNextTrack();
@@ -138,7 +140,9 @@ export function useHealingAudio() {
   const setVolume = useCallback((val: number) => {
     const clamped = Math.max(0, Math.min(1, val));
     setVolumeState(clamped);
-    setStoredVolume(clamped);
+    try {
+      localStorage.setItem(VOLUME_STORAGE_KEY, clamped.toString());
+    } catch {}
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : clamped;
     }
@@ -167,7 +171,7 @@ export function useHealingAudio() {
     isPlaying,
     isLoading,
     currentTrack,
-    tracks: RELAXING_AUDIO_TRACKS,
+    tracks: READING_AUDIO_TRACKS,
     volume,
     isMuted,
     isShuffle,

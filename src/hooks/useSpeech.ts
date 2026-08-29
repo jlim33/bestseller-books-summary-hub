@@ -1,111 +1,67 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export function useSpeech() {
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [currentText, setCurrentText] = useState<string>("");
   const [supported, setSupported] = useState<boolean>(false);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       setSupported(true);
-
-      const updateVoices = () => {
-        const availableVoices = window.speechSynthesis.getVoices();
-        setVoices(availableVoices);
-      };
-
-      updateVoices();
-      window.speechSynthesis.onvoiceschanged = updateVoices;
     }
   }, []);
 
-  const getBestVoice = useCallback((isEnglish: boolean): SpeechSynthesisVoice | null => {
-    if (voices.length === 0) return null;
-
-    if (isEnglish) {
-      const preferredUSVoices = [
-        "Microsoft Jenny Online (Natural) - English (United States)",
-        "Microsoft Aria Online (Natural) - English (United States)",
-        "Google US English",
-        "Samantha",
-        "Microsoft Guy Online (Natural) - English (United States)",
-        "Microsoft Zira - English (United States)",
-        "Alex",
-      ];
-
-      for (const name of preferredUSVoices) {
-        const found = voices.find(v => v.name.toLowerCase().includes(name.toLowerCase()));
-        if (found) return found;
-      }
-
-      const usVoice = voices.find(v => v.lang === "en-US" || v.lang === "en_US");
-      if (usVoice) return usVoice;
-
-      const enVoice = voices.find(v => v.lang.startsWith("en"));
-      if (enVoice) return enVoice;
-    } else {
-      const preferredKRVoices = [
-        "Google 한국어",
-        "Google 한국의",
-        "Microsoft SunHi Online (Natural) - Korean (Korea)",
-        "Microsoft Heami - Korean (Korean)",
-        "Yuna"
-      ];
-
-      for (const name of preferredKRVoices) {
-        const found = voices.find(v => v.name.toLowerCase().includes(name.toLowerCase()));
-        if (found) return found;
-      }
-
-      const krVoice = voices.find(v => v.lang === "ko-KR" || v.lang === "ko_KR" || v.lang.startsWith("ko"));
-      if (krVoice) return krVoice;
-    }
-
-    return null;
-  }, [voices]);
-
-  const speak = useCallback((text: string, lang?: "en" | "ko") => {
+  const speak = useCallback((text: string, locale: "ko" | "en" = "ko") => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
     window.speechSynthesis.cancel();
 
-    const cleanText = text.replace(/[*_#`$]/g, " ").replace(/\s+/g, " ").trim();
-    if (!cleanText) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utteranceRef.current = utterance;
 
-    const isEnglish = lang === "en" || (!lang && !/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(cleanText));
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = isEnglish ? "en-US" : "ko-KR";
-    utterance.rate = isEnglish ? 0.95 : 1.0; // Gentle, warm clinical tempo
-    utterance.pitch = 1.0;
-
-    const selectedVoice = getBestVoice(isEnglish);
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
+    const voices = window.speechSynthesis.getVoices();
+    if (locale === "en") {
+      const enVoice =
+        voices.find((v) => v.lang.startsWith("en-US") && (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Samantha") || v.name.includes("David"))) ||
+        voices.find((v) => v.lang.startsWith("en"));
+      if (enVoice) utterance.voice = enVoice;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+    } else {
+      const koVoice =
+        voices.find((v) => v.lang.startsWith("ko") && (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Yuna") || v.name.includes("Heami"))) ||
+        voices.find((v) => v.lang.startsWith("ko"));
+      if (koVoice) utterance.voice = koVoice;
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
     }
 
     utterance.onstart = () => {
-      setIsPlaying(true);
+      setIsSpeaking(true);
       setIsPaused(false);
-      setCurrentText(cleanText);
     };
 
     utterance.onend = () => {
-      setIsPlaying(false);
+      setIsSpeaking(false);
       setIsPaused(false);
-      setCurrentText("");
     };
 
     utterance.onerror = () => {
-      setIsPlaying(false);
+      setIsSpeaking(false);
       setIsPaused(false);
-      setCurrentText("");
     };
 
     window.speechSynthesis.speak(utterance);
-  }, [getBestVoice]);
+  }, []);
+
+  const stop = useCallback(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setIsPaused(false);
+    }
+  }, []);
 
   const pause = useCallback(() => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -121,23 +77,13 @@ export function useSpeech() {
     }
   }, []);
 
-  const stop = useCallback(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
-      setIsPaused(false);
-      setCurrentText("");
-    }
-  }, []);
-
   return {
-    supported,
-    isPlaying,
-    isPaused,
-    currentText,
     speak,
+    stop,
     pause,
     resume,
-    stop,
+    isSpeaking,
+    isPaused,
+    supported,
   };
 }

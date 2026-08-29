@@ -1,130 +1,117 @@
 "use client";
 
 import React from "react";
-import { X, Bookmark, Trash2, ArrowRight, Download, BookOpen } from "lucide-react";
-import { NewsArticle } from "@/lib/types";
+import {
+  X,
+  Bookmark,
+  BookOpen,
+  Trash2,
+  ChevronRight,
+  Clock
+} from "lucide-react";
+import { BookItem } from "@/lib/types";
 
 interface BookmarksDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  bookmarks: NewsArticle[];
+  bookmarkedBooks: BookItem[];
+  onSelectBook: (book: BookItem) => void;
+  onRemoveBookmark: (id: string) => void;
   locale?: "ko" | "en";
-  onSelectArticle: (article: NewsArticle) => void;
-  onRemoveBookmark: (article: NewsArticle) => void;
 }
 
 export function BookmarksDrawer({
   isOpen,
   onClose,
-  bookmarks,
-  locale = "ko",
-  onSelectArticle,
+  bookmarkedBooks,
+  onSelectBook,
   onRemoveBookmark,
+  locale = "ko",
 }: BookmarksDrawerProps) {
-  if (!isOpen) return null;
-
   const isEn = locale === "en";
 
-  const exportBookmarksJSON = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(bookmarks, null, 2));
-    const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `VitaPulse-Saved-Studies-${new Date().toISOString().slice(0, 10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white dark:bg-slate-900 border-l border-sage-200/80 dark:border-slate-800 shadow-2xl flex flex-col justify-between">
+        <div className="w-screen max-w-md bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col">
           
           {/* Header */}
-          <div className="p-6 border-b border-sage-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-sage-100 dark:bg-sage-950/50 text-sage-700 dark:text-sage-300">
+              <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
                 <Bookmark className="w-5 h-5 fill-current" />
               </div>
               <div>
-                <h2 className="text-base font-black text-slate-900 dark:text-white">
-                  {isEn ? "Saved Medical Studies" : "저장한 의학 논문"}
-                </h2>
-                <p className="text-xs text-slate-400 font-mono">
-                  {bookmarks.length} {isEn ? "studies saved" : "편 보관됨"}
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                  {isEn ? "My Reading Library" : "내 서재 & 보관함"}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {bookmarkedBooks.length} {isEn ? "books saved" : "권의 도서 저장됨"}
                 </p>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="p-2 rounded-xl border border-sage-200 dark:border-slate-800 hover:bg-slate-100 text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* List */}
-          <div className="p-6 overflow-y-auto flex-1 space-y-3">
-            {bookmarks.length === 0 ? (
-              <div className="text-center py-16 text-slate-400 text-xs">
-                <Bookmark className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-700" />
-                <p className="font-bold mb-1">{isEn ? "No saved studies yet" : "저장된 논문이 없습니다"}</p>
-                <p>{isEn ? "Click the bookmark icon on any card to save it here." : "논문 카드의 북마크 아이콘을 눌러 저장해보세요."}</p>
+          {/* Book List */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-3">
+            {bookmarkedBooks.length === 0 ? (
+              <div className="h-64 flex flex-col items-center justify-center text-center text-slate-400">
+                <BookOpen className="w-12 h-12 stroke-1 mb-2 text-slate-300" />
+                <p className="text-sm font-bold">{isEn ? "Your library is empty" : "보관된 도서가 없습니다."}</p>
+                <p className="text-xs mt-1">{isEn ? "Bookmark books to read chapter summaries later" : "관심 있는 도서의 북마크 아이콘을 클릭해보세요."}</p>
               </div>
             ) : (
-              bookmarks.map((art) => (
+              bookmarkedBooks.map((book) => (
                 <div
-                  key={art.id}
-                  onClick={() => {
-                    onSelectArticle(art);
-                    onClose();
-                  }}
-                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-sage-200/80 dark:border-slate-800 hover:border-sage-400 transition-all cursor-pointer group flex flex-col justify-between gap-2"
+                  key={book.id}
+                  className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 group hover:border-amber-400 transition-all"
                 >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-sage-900 dark:text-sage-200">
-                      {art.aiSummary?.journalReference || art.source}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveBookmark(art);
-                      }}
-                      className="p-1 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
-                      title={isEn ? "Remove" : "삭제"}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  <div
+                    onClick={() => {
+                      onClose();
+                      onSelectBook(book);
+                    }}
+                    className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
+                  >
+                    <img
+                      src={book.coverImage}
+                      alt={book.title}
+                      className="w-12 h-16 object-cover rounded-lg shrink-0 border border-slate-200 dark:border-slate-700"
+                    />
+                    <div className="truncate">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-amber-600">
+                        {book.title}
+                      </p>
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                        {book.author}
+                      </p>
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 font-mono mt-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {book.chapters.length} Chapters ({book.totalReadTimeMinutes}m)
+                      </p>
+                    </div>
                   </div>
 
-                  <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 group-hover:text-sage-700 dark:group-hover:text-sage-300 line-clamp-2">
-                    {art.title}
-                  </h4>
-
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                    <span>{art.category}</span>
-                    <span className="flex items-center gap-1 text-sage-600 font-bold">
-                      {isEn ? "Read" : "보기"} <ArrowRight className="w-3 h-3" />
-                    </span>
-                  </div>
+                  <button
+                    onClick={() => onRemoveBookmark(book.id)}
+                    className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                    title={isEn ? "Remove" : "삭제"}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               ))
             )}
           </div>
-
-          {/* Footer */}
-          {bookmarks.length > 0 && (
-            <div className="p-6 border-t border-sage-100 dark:border-slate-800 bg-sage-50/50 dark:bg-slate-950/40">
-              <button
-                onClick={exportBookmarksJSON}
-                className="w-full py-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-sage-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-sage-600 text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>{isEn ? "Export Studies (JSON)" : "논문 내보내기 (JSON)"}</span>
-              </button>
-            </div>
-          )}
 
         </div>
       </div>
