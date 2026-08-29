@@ -78,6 +78,7 @@ export function DailyBriefingModal({
         locale: isEn ? "en" : "ko",
         persona: selectedPersona,
         rate: playbackRate,
+        bookId: "briefing",
       });
     }
   };

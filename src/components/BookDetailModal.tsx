@@ -86,6 +86,8 @@ export function BookDetailModal({
         locale: isEn ? "en" : "ko",
         persona: selectedPersona,
         rate: playbackRate,
+        bookId: book.id,
+        chapterNumber: chap.chapterNumber,
       });
     }
   };
@@ -111,6 +113,7 @@ export function BookDetailModal({
         locale: isEn ? "en" : "ko",
         persona: selectedPersona,
         rate: playbackRate,
+        bookId: book.id,
       });
     }
   };
