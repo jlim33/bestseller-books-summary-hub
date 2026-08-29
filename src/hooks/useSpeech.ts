@@ -22,11 +22,11 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [supported, setSupported] = useState<boolean>(true);
-  const [activeVoiceName, setActiveVoiceName] = useState<string>("스튜디오 AI 앵커 (MP3)");
+  const [activeVoiceName, setActiveVoiceName] = useState<string>("전문 방송 아나운서 (고음질)");
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
   const [totalSentences, setTotalSentences] = useState<number>(0);
   const [selectedPersona, setSelectedPersona] = useState<VoicePersona>(
-    defaultLocale === "ko" ? "ko-male-anchor" : "us-male-executive"
+    defaultLocale === "ko" ? "ko-female-anchor" : "us-female-anchor"
   );
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
 

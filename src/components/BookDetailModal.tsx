@@ -325,63 +325,18 @@ export function BookDetailModal({
 
                 {/* Persona Switchers */}
                 {isEn ? (
-                  <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
-                    <button
-                      onClick={() => changePersona("us-male-executive")}
-                      className={`p-1.5 rounded-xl border text-center transition-all ${
-                        selectedPersona === "us-male-executive"
-                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
-                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                      }`}
-                    >
-                      🇺🇸 US Executive
-                    </button>
-
-                    <button
-                      onClick={() => changePersona("us-female-anchor")}
-                      className={`p-1.5 rounded-xl border text-center transition-all ${
-                        selectedPersona === "us-female-anchor"
-                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
-                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                      }`}
-                    >
-                      🇺🇸 US Anchor
-                    </button>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                    <span className="w-full py-1.5 px-2 rounded-xl bg-amber-600 text-white font-bold text-center shadow-xs flex items-center justify-center gap-1">
+                      <span>🎙️</span>
+                      <span>US Native Broadcast Voice</span>
+                    </span>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-1 text-[10px] font-bold">
-                    <button
-                      onClick={() => changePersona("ko-female-anchor")}
-                      className={`p-1.5 rounded-xl border text-center transition-all ${
-                        selectedPersona === "ko-female-anchor"
-                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
-                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                      }`}
-                    >
-                      🎙️ 여성 아나운서
-                    </button>
-
-                    <button
-                      onClick={() => changePersona("ko-male-anchor")}
-                      className={`p-1.5 rounded-xl border text-center transition-all ${
-                        selectedPersona === "ko-male-anchor"
-                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
-                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                      }`}
-                    >
-                      🎙️ 남성 앵커
-                    </button>
-
-                    <button
-                      onClick={() => changePersona("ko-book-narrator")}
-                      className={`p-1.5 rounded-xl border text-center transition-all ${
-                        selectedPersona === "ko-book-narrator"
-                          ? "bg-amber-600 text-white border-amber-600 shadow-xs"
-                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                      }`}
-                    >
-                      📖 북 내레이터
-                    </button>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                    <span className="w-full py-1.5 px-2 rounded-xl bg-amber-600 text-white font-bold text-center shadow-xs flex items-center justify-center gap-1">
+                      <span>🎙️</span>
+                      <span>전문 방송 아나운서 (고음질 음성)</span>
+                    </span>
                   </div>
                 )}
 
