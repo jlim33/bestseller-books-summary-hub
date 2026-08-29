@@ -123,7 +123,7 @@ export function DailyBriefingModal({
                 <span>{isEn ? "Voice:" : "전문 음성:"}</span>
               </span>
               <span className="px-2.5 py-1 rounded-lg bg-amber-600 text-white font-bold text-[10px] shadow-xs">
-                {isEn ? "🎙️ US Executive Voice (Male)" : "🎙️ 전문 남성 앵커 (고음질)"}
+                {isEn ? "🎙️ US Broadcast Anchor (Female)" : "🎙️ 전문 남성 앵커 (고음질)"}
               </span>
             </div>
 

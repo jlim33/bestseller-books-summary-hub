@@ -328,7 +328,7 @@ export function BookDetailModal({
                   <div className="flex items-center gap-1.5 text-[10px] font-bold">
                     <span className="w-full py-1.5 px-2 rounded-xl bg-amber-600 text-white font-bold text-center shadow-xs flex items-center justify-center gap-1">
                       <span>🎙️</span>
-                      <span>US Native Executive Voice (Male)</span>
+                      <span>US Native Broadcast Voice (Female)</span>
                     </span>
                   </div>
                 ) : (

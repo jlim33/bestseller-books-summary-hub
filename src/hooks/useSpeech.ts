@@ -3,7 +3,7 @@ import { getStudioNarrationUrl } from "@/lib/studioNarration";
 
 export type VoicePersona =
   | "ko-male-anchor"
-  | "us-male-executive";
+  | "us-female-anchor";
 
 export interface SpeechOptions {
   locale?: "en" | "ko";
@@ -22,7 +22,7 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
   const [totalSentences, setTotalSentences] = useState<number>(0);
   const [selectedPersona, setSelectedPersona] = useState<VoicePersona>(
-    defaultLocale === "en" ? "us-male-executive" : "ko-male-anchor"
+    defaultLocale === "en" ? "us-female-anchor" : "ko-male-anchor"
   );
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
 
@@ -62,7 +62,7 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
     }
   }, []);
 
-  // Primary speak method: strictly locks Korean to genuine Male Anchor
+  // Primary speak method: Korean is Male Anchor, English is Female Broadcast Anchor
   const speak = useCallback(
     (text: string, options: SpeechOptions | ("ko" | "en") = defaultLocale) => {
       if (typeof window === "undefined" || !audioRef.current) return;
@@ -77,9 +77,9 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
       const hasKorean = /[가-힣]/.test(text);
       const isKo = resolvedOptions.locale === "ko" || (resolvedOptions.locale !== "en" && (defaultLocale === "ko" || hasKorean));
       
-      const voiceKey: "ko-male" | "en-male" = isKo ? "ko-male" : "en-male";
-      setSelectedPersona(isKo ? "ko-male-anchor" : "us-male-executive");
-      setActiveVoiceName(isKo ? "🎙️ 전문 남성 앵커 (한국어)" : "🎙️ US Executive (English)");
+      const voiceKey: "ko-male" | "en-female" = isKo ? "ko-male" : "en-female";
+      setSelectedPersona(isKo ? "ko-male-anchor" : "us-female-anchor");
+      setActiveVoiceName(isKo ? "🎙️ 전문 남성 앵커 (한국어)" : "🎙️ US Broadcast Anchor (Female)");
 
       const rate = resolvedOptions.rate || playbackRate;
       setPlaybackRate(rate);
