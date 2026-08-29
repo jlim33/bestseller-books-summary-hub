@@ -11,10 +11,12 @@ import {
   Copy,
   Clock,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Mic,
+  Gauge
 } from "lucide-react";
 import { BookItem } from "@/lib/types";
-import { useSpeech } from "@/hooks/useSpeech";
+import { useSpeech, VoicePersona } from "@/hooks/useSpeech";
 
 interface DailyBriefingModalProps {
   books: BookItem[];
@@ -30,7 +32,18 @@ export function DailyBriefingModal({
   onSelectBook,
 }: DailyBriefingModalProps) {
   const isEn = locale === "en";
-  const { speak, stop, isSpeaking } = useSpeech();
+  const {
+    speak,
+    stop,
+    isSpeaking,
+    selectedPersona,
+    playbackRate,
+    changePersona,
+    changeRate,
+    currentSentenceIndex,
+    totalSentences,
+    activeVoiceName
+  } = useSpeech();
   const [copied, setCopied] = useState(false);
 
   const digestContent = isEn
@@ -38,7 +51,7 @@ export function DailyBriefingModal({
 1. AI & IT (Life 3.0): Life evolves from biological (1.0) to cultural (2.0) and technological (3.0). Value alignment is humanity's highest priority.
 2. Chip War: Advanced semiconductors are the geopolitical bedrock of power; lithography chokepoints determine the world order.
 3. Science (A Brief History of Time): Spacetime is dynamic and curved; black holes evaporate via quantum radiation.
-4. Philosophy (Meditations): Control what is within your power and love your fate (Amor Fati). What stands in the way becomes the way.
+4. Philosophy (Meditations): Control what is within your power and love your fate. What stands in the way becomes the way.
 5. Mathematics (Infinite Powers): Calculus unlocks continuous reality by analyzing infinitesimal slices to predict the universe and power AI.
 6. Health (Outlive): Prevent chronic diseases 30 years before onset via Zone 2 cardio, muscle mass, and optimal metabolic biomarkers.
 7. Habits (Atomic Habits): 1% daily marginal gains compound into 37x annual improvement. Systems determine outcomes.`
@@ -61,7 +74,11 @@ export function DailyBriefingModal({
     if (isSpeaking) {
       stop();
     } else {
-      speak(digestContent, isEn ? "en" : "ko");
+      speak(digestContent, {
+        locale: isEn ? "en" : "ko",
+        persona: selectedPersona,
+        rate: playbackRate,
+      });
     }
   };
 
@@ -97,6 +114,58 @@ export function DailyBriefingModal({
         {/* Content Body */}
         <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs sm:text-sm">
           
+          {/* Voice Controls Bar */}
+          <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-slate-850 border border-amber-200/60 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                <Mic className="w-3.5 h-3.5 text-amber-600" />
+                <span>{isEn ? "US Voice:" : "음성 선택:"}</span>
+              </span>
+              <div className="flex items-center gap-1 font-bold text-[10px]">
+                <button
+                  onClick={() => changePersona("us-male-executive")}
+                  className={`px-2 py-1 rounded-lg border transition-all ${
+                    selectedPersona === "us-male-executive"
+                      ? "bg-amber-600 text-white border-amber-600"
+                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                  }`}
+                >
+                  Executive
+                </button>
+                <button
+                  onClick={() => changePersona("us-female-anchor")}
+                  className={`px-2 py-1 rounded-lg border transition-all ${
+                    selectedPersona === "us-female-anchor"
+                      ? "bg-amber-600 text-white border-amber-600"
+                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                  }`}
+                >
+                  Anchor
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 font-mono font-bold text-[10px]">
+              <span className="text-slate-400 font-sans font-bold flex items-center gap-1 mr-1">
+                <Gauge className="w-3 h-3 text-slate-400" />
+                {isEn ? "Speed:" : "배속:"}
+              </span>
+              {[0.9, 1.0, 1.15, 1.3].map((r) => (
+                <button
+                  key={r}
+                  onClick={() => changeRate(r)}
+                  className={`px-1.5 py-0.5 rounded-lg transition-all ${
+                    playbackRate === r
+                      ? "bg-amber-600 text-white"
+                      : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
+                  }`}
+                >
+                  {r}x
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-slate-850 border border-amber-200/60 dark:border-slate-800 font-mono leading-relaxed whitespace-pre-line text-slate-800 dark:text-slate-200">
             {digestContent}
           </div>
@@ -132,18 +201,22 @@ export function DailyBriefingModal({
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               isSpeaking
                 ? "bg-rose-600 text-white animate-pulse"
-                : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-100"
+                : "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-500/20"
             }`}
           >
             {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            <span>{isSpeaking ? (isEn ? "Stop Audio" : "오디오 정지") : (isEn ? "Listen to Digest" : "음성 다이제스트 듣기")}</span>
+            <span>
+              {isSpeaking
+                ? (isEn ? `Speaking (${currentSentenceIndex}/${totalSentences}) • Stop` : `음성 낭독 중 (${currentSentenceIndex}/${totalSentences}) • 정지`)
+                : (isEn ? "🎙️ Listen in US Native Voice" : "🎙️ 미국 네이티브 음성 다이제스트")}
+            </span>
           </button>
 
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all"
           >
-            {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
             <span>{copied ? (isEn ? "Copied!" : "복사 완료!") : (isEn ? "Copy Digest" : "텍스트 복사")}</span>
           </button>
         </div>

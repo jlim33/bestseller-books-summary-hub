@@ -12,20 +12,16 @@ import {
   Bookmark,
   CheckCircle2,
   Circle,
-  Share2,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
-  Award,
   Layers,
   Lightbulb,
   Target,
   Quote,
-  Eye,
-  Type
+  Mic,
+  Gauge
 } from "lucide-react";
 import { BookItem, ChapterSummary } from "@/lib/types";
-import { useSpeech } from "@/hooks/useSpeech";
+import { useSpeech, VoicePersona } from "@/hooks/useSpeech";
 
 interface BookDetailModalProps {
   book: BookItem;
@@ -43,12 +39,24 @@ export function BookDetailModal({
   locale = "ko",
 }: BookDetailModalProps) {
   const isEn = locale === "en";
-  const { speak, stop, isSpeaking, supported } = useSpeech();
+  const {
+    speak,
+    stop,
+    isSpeaking,
+    selectedPersona,
+    playbackRate,
+    changePersona,
+    changeRate,
+    currentSentenceIndex,
+    totalSentences,
+    activeVoiceName
+  } = useSpeech();
 
   const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
   const [completedChapters, setCompletedChapters] = useState<number[]>([]);
   const [readingTheme, setReadingTheme] = useState<"clean" | "sepia" | "dark">("clean");
   const [fontSize, setFontSize] = useState<"sm" | "base" | "lg">("base");
+  const [showVoiceControls, setShowVoiceControls] = useState<boolean>(false);
 
   const toggleChapterComplete = (chapNum: number) => {
     setCompletedChapters((prev) =>
@@ -64,7 +72,11 @@ export function BookDetailModal({
       stop();
     } else {
       const script = `${chap.chapterTitle}. ${chap.coreTakeaway}. ${chap.detailedContent}. ${chap.actionableLesson}`;
-      speak(script, isEn ? "en" : "ko");
+      speak(script, {
+        locale: isEn ? "en" : "ko",
+        persona: selectedPersona,
+        rate: playbackRate,
+      });
     }
   };
 
@@ -208,22 +220,84 @@ export function BookDetailModal({
               </div>
             </div>
 
-            {/* Global Voice Read Button */}
-            <button
-              onClick={() => handleListenChapter(currentChapter)}
-              className={`w-full py-2.5 px-4 rounded-2xl flex items-center justify-center gap-2 font-extrabold text-xs transition-all shadow-md ${
-                isSpeaking
-                  ? "bg-rose-600 text-white animate-pulse"
-                  : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950"
-              }`}
-            >
-              {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              <span>
-                {isSpeaking
-                  ? (isEn ? "Stop Audio Narration" : "오디오 낭독 중지")
-                  : (isEn ? "Listen to Current Chapter (US Broadcast)" : "현재 챕터 음성 낭독 듣기")}
-              </span>
-            </button>
+            {/* US Native Voice Broadcast Narration Section */}
+            <div className="space-y-2">
+              <button
+                onClick={() => handleListenChapter(currentChapter)}
+                className={`w-full py-2.5 px-4 rounded-2xl flex items-center justify-center gap-2 font-extrabold text-xs transition-all shadow-md ${
+                  isSpeaking
+                    ? "bg-rose-600 text-white animate-pulse"
+                    : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950"
+                }`}
+              >
+                {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                <span>
+                  {isSpeaking
+                    ? (isEn ? `Speaking (${currentSentenceIndex}/${totalSentences}) • Stop` : `음성 낭독 중 (${currentSentenceIndex}/${totalSentences}) • 정지`)
+                    : (isEn ? "🎙️ Listen in US Native Voice" : "🎙️ 미국 네이티브 음성 낭독 듣기")}
+                </span>
+              </button>
+
+              {/* Toggle Voice & Speed Settings */}
+              <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-slate-850 border border-amber-200/60 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                  <span className="flex items-center gap-1">
+                    <Mic className="w-3.5 h-3.5 text-amber-600" />
+                    <span>{isEn ? "US Voice Persona:" : "미국 네이티브 보이스:"}</span>
+                  </span>
+                  <span className="text-[10px] text-amber-700 dark:text-amber-400 font-mono">
+                    {activeVoiceName.replace("Microsoft ", "").replace("Google ", "")}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
+                  <button
+                    onClick={() => changePersona("us-male-executive")}
+                    className={`p-1.5 rounded-xl border text-center transition-all ${
+                      selectedPersona === "us-male-executive"
+                        ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    🇺🇸 US Executive
+                  </button>
+
+                  <button
+                    onClick={() => changePersona("us-female-anchor")}
+                    className={`p-1.5 rounded-xl border text-center transition-all ${
+                      selectedPersona === "us-female-anchor"
+                        ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    🇺🇸 US Anchor
+                  </button>
+                </div>
+
+                {/* Playback Speed Controls */}
+                <div className="flex items-center justify-between pt-1 text-[10px]">
+                  <span className="text-slate-400 font-bold flex items-center gap-1">
+                    <Gauge className="w-3 h-3 text-slate-400" />
+                    {isEn ? "Speed:" : "배속:"}
+                  </span>
+                  <div className="flex items-center gap-1 font-mono font-bold">
+                    {[0.9, 1.0, 1.15, 1.3].map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => changeRate(r)}
+                        className={`px-1.5 py-0.5 rounded-lg transition-all ${
+                          playbackRate === r
+                            ? "bg-amber-600 text-white"
+                            : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        {r}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Chapters Navigation Accordion / List */}
             <div>
