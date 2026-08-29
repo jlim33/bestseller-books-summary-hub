@@ -43,7 +43,7 @@ export function DailyBriefingModal({
     currentSentenceIndex,
     totalSentences,
     activeVoiceName
-  } = useSpeech();
+  } = useSpeech(locale);
   const [copied, setCopied] = useState(false);
 
   const digestContent = isEn

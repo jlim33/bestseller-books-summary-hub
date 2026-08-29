@@ -3,11 +3,7 @@ import { getStudioNarrationUrl } from "@/lib/studioNarration";
 
 export type VoicePersona =
   | "ko-female-anchor"
-  | "ko-male-anchor"
-  | "ko-book-narrator"
-  | "us-male-executive"
-  | "us-female-anchor"
-  | "us-natural-studio";
+  | "us-female-anchor";
 
 export interface SpeechOptions {
   locale?: "en" | "ko";
@@ -18,15 +14,15 @@ export interface SpeechOptions {
   chapterNumber?: number;
 }
 
-export function useSpeech(defaultLocale: "en" | "ko" = "en") {
+export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [supported, setSupported] = useState<boolean>(true);
-  const [activeVoiceName, setActiveVoiceName] = useState<string>("전문 방송 아나운서 (고음질)");
+  const [activeVoiceName, setActiveVoiceName] = useState<string>("전문 방송 아나운서 (한국어)");
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
   const [totalSentences, setTotalSentences] = useState<number>(0);
   const [selectedPersona, setSelectedPersona] = useState<VoicePersona>(
-    defaultLocale === "ko" ? "ko-female-anchor" : "us-female-anchor"
+    defaultLocale === "en" ? "us-female-anchor" : "ko-female-anchor"
   );
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
 
@@ -53,7 +49,7 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
         setCurrentSentenceIndex(0);
       };
       audio.onerror = () => {
-        console.warn("Studio audio error, stopping playback");
+        console.warn("Studio audio notice, stopping playback");
         setIsSpeaking(false);
         setIsPaused(false);
       };
@@ -66,7 +62,7 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
     }
   }, []);
 
-  // Primary speak method: plays real studio-recorded AI MP3 audio files directly
+  // Primary speak method
   const speak = useCallback(
     (text: string, options: SpeechOptions | ("ko" | "en") = defaultLocale) => {
       if (typeof window === "undefined" || !audioRef.current) return;
@@ -75,36 +71,39 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
         typeof options === "string" ? { locale: options } : options;
 
       optionsRef.current = resolvedOptions;
-      const persona = resolvedOptions.persona || selectedPersona;
-      const rate = resolvedOptions.rate || playbackRate;
 
-      if (resolvedOptions.persona) setSelectedPersona(resolvedOptions.persona);
-      if (resolvedOptions.rate) setPlaybackRate(resolvedOptions.rate);
+      // Detect language: check explicit locale or Korean characters
+      const hasKorean = /[가-힣]/.test(text);
+      const isKo = resolvedOptions.locale === "ko" || (resolvedOptions.locale !== "en" && (defaultLocale === "ko" || hasKorean));
+      const effectiveLocale = isKo ? "ko" : "en";
+      const voiceKey = isKo ? "ko-female" : "en-female";
+
+      const persona: VoicePersona = isKo ? "ko-female-anchor" : "us-female-anchor";
+      setSelectedPersona(persona);
+      setActiveVoiceName(isKo ? "전문 방송 아나운서 (한국어)" : "US Broadcast Voice (English)");
+
+      const rate = resolvedOptions.rate || playbackRate;
+      setPlaybackRate(rate);
 
       isCancelledRef.current = false;
       audioRef.current.pause();
 
-      // Determine voice key
-      let voiceKey: "ko-male" | "ko-female" | "en-male" | "en-female" = "ko-male";
-      if (persona === "ko-male-anchor" || persona === "ko-book-narrator") {
-        voiceKey = "ko-male";
-        setActiveVoiceName("스튜디오 남성 앵커 (고음질 MP3)");
-      } else if (persona === "ko-female-anchor") {
-        voiceKey = "ko-female";
-        setActiveVoiceName("스튜디오 여성 아나운서 (고음질 MP3)");
-      } else if (persona === "us-male-executive") {
-        voiceKey = "en-male";
-        setActiveVoiceName("Studio US Executive (MP3)");
-      } else {
-        voiceKey = "en-female";
-        setActiveVoiceName("Studio US Anchor (MP3)");
-      }
+      // Clean text for optimal TTS streaming
+      const cleanSnippet = text
+        .replace(/["""]/g, '"')
+        .replace(/[''']/g, "'")
+        .replace(/•/g, " ")
+        .replace(/\*/g, "")
+        .replace(/#/g, "")
+        .replace(/—/g, ", ")
+        .trim()
+        .slice(0, 180);
 
       // 1. Check if we have a direct book summary or briefing pre-rendered MP3
       const bookId = resolvedOptions.bookId || "";
       const targetAudioUrl = bookId
         ? getStudioNarrationUrl(bookId, voiceKey)
-        : `/api/tts?voice=${voiceKey}&text=${encodeURIComponent(text.slice(0, 150))}`;
+        : `/api/tts?voice=${voiceKey}&text=${encodeURIComponent(cleanSnippet)}`;
 
       audioRef.current.src = targetAudioUrl;
       audioRef.current.playbackRate = rate;
@@ -118,15 +117,14 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
           setTotalSentences(1);
         })
         .catch((err) => {
-          console.warn("Studio MP3 playback notice, falling back to streaming API:", err);
-          // Fallback to /api/tts streaming
+          console.warn("Studio MP3 playback fallback to /api/tts streaming:", err);
           if (audioRef.current) {
-            audioRef.current.src = `/api/tts?voice=${voiceKey}&text=${encodeURIComponent(text.slice(0, 150))}`;
+            audioRef.current.src = `/api/tts?voice=${voiceKey}&text=${encodeURIComponent(cleanSnippet)}`;
             audioRef.current.play().catch(() => {});
           }
         });
     },
-    [defaultLocale, playbackRate, selectedPersona]
+    [defaultLocale, playbackRate]
   );
 
   const stop = useCallback(() => {
@@ -163,13 +161,8 @@ export function useSpeech(defaultLocale: "en" | "ko" = "en") {
     (persona: VoicePersona) => {
       setSelectedPersona(persona);
       optionsRef.current.persona = persona;
-      if (isSpeaking && audioRef.current) {
-        // Switch voice on the fly
-        const currentText = sentencesRef.current[0] || "베스트셀러 브리핑입니다.";
-        speak(currentText, { ...optionsRef.current, persona });
-      }
     },
-    [isSpeaking, speak]
+    []
   );
 
   const changeRate = useCallback(

@@ -52,7 +52,7 @@ export function BookDetailModal({
     currentSentenceIndex,
     totalSentences,
     activeVoiceName
-  } = useSpeech();
+  } = useSpeech(locale);
 
   const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
   const [completedChapters, setCompletedChapters] = useState<number[]>([]);
