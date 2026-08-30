@@ -76,9 +76,7 @@ export function DailyBriefingModal({
     } else {
       speak(digestContent, {
         locale: isEn ? "en" : "ko",
-        persona: selectedPersona,
         rate: playbackRate,
-        bookId: "briefing",
       });
     }
   };

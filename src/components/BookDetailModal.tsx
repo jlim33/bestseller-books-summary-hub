@@ -81,13 +81,13 @@ export function BookDetailModal({
       setIsAudiobookMode(false);
     } else {
       setPlayingChapterIndex(index);
-      const script = `${chap.chapterTitle}. ${chap.coreTakeaway}. ${chap.detailedContent}. ${chap.actionableLesson}`;
+      const script = isEn
+        ? `Chapter ${chap.chapterNumber}: ${chap.chapterTitle}. Core Takeaway: ${chap.coreTakeaway}. In-Depth Explanation: ${chap.detailedContent}. Actionable Lesson: ${chap.actionableLesson}`
+        : `제 ${chap.chapterNumber}장: ${chap.chapterTitle}. 핵심 요약: ${chap.coreTakeaway}. 상세 해설: ${chap.detailedContent}. 실전 적용 방안: ${chap.actionableLesson}`;
+
       speak(script, {
         locale: isEn ? "en" : "ko",
-        persona: selectedPersona,
         rate: playbackRate,
-        bookId: book.id,
-        chapterNumber: chap.chapterNumber,
       });
     }
   };
@@ -105,15 +105,15 @@ export function BookDetailModal({
       const fullScript = book.chapters
         .map(
           (c) =>
-            `${c.chapterTitle}. ${c.coreTakeaway}. ${c.detailedContent}. ${c.actionableLesson}`
+            isEn
+              ? `Chapter ${c.chapterNumber}: ${c.chapterTitle}. Core Takeaway: ${c.coreTakeaway}. In-Depth Explanation: ${c.detailedContent}. Actionable Lesson: ${c.actionableLesson}`
+              : `제 ${c.chapterNumber}장: ${c.chapterTitle}. 핵심 요약: ${c.coreTakeaway}. 상세 해설: ${c.detailedContent}. 실전 적용 방안: ${c.actionableLesson}`
         )
-        .join(" ... Next Chapter ... ");
+        .join(isEn ? " ... Next Chapter ... " : " ... 다음 챕터 ... ");
 
       speak(fullScript, {
         locale: isEn ? "en" : "ko",
-        persona: selectedPersona,
         rate: playbackRate,
-        bookId: book.id,
       });
     }
   };

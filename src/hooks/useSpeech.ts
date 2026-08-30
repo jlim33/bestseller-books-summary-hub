@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getStudioNarrationUrl } from "@/lib/studioNarration";
 
 export type VoicePersona =
   | "ko-male-anchor"
@@ -10,8 +9,43 @@ export interface SpeechOptions {
   persona?: VoicePersona;
   rate?: number;
   pitch?: number;
-  bookId?: string;
-  chapterNumber?: number;
+  onSentenceChange?: (sentenceIndex: number, sentenceText: string) => void;
+  onComplete?: () => void;
+}
+
+function splitTextIntoSentences(text: string): string[] {
+  const cleaned = text
+    .replace(/["""]/g, '"')
+    .replace(/[''']/g, "'")
+    .replace(/•/g, " ")
+    .replace(/\*/g, "")
+    .replace(/#/g, "")
+    .replace(/—/g, ", ")
+    .replace(/~/g, " ")
+    .replace(/\r\n/g, "\n")
+    .trim();
+
+  const raw = cleaned.split(/(?<=[.!?;\n])\s+/);
+  const result: string[] = [];
+
+  for (let s of raw) {
+    s = s.trim();
+    if (!s || s.length === 0) continue;
+
+    // If a single sentence is very long (> 150 chars), sub-divide at commas
+    if (s.length > 150) {
+      const subParts = s.split(/(?<=[,])\s+/);
+      for (const part of subParts) {
+        if (part.trim().length > 0) {
+          result.push(part.trim());
+        }
+      }
+    } else {
+      result.push(s);
+    }
+  }
+
+  return result.length > 0 ? result : [cleaned];
 }
 
 export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
@@ -21,14 +55,16 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
   const [activeVoiceName, setActiveVoiceName] = useState<string>("🎙️ 전문 남성 앵커 (고음질)");
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
   const [totalSentences, setTotalSentences] = useState<number>(0);
+  const [currentSentenceText, setCurrentSentenceText] = useState<string>("");
   const [selectedPersona, setSelectedPersona] = useState<VoicePersona>(
     defaultLocale === "en" ? "us-female-anchor" : "ko-male-anchor"
   );
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
 
   const sentencesRef = useRef<string[]>([]);
-  const sentenceIndexRef = useRef<number>(0);
+  const currentIndexRef = useRef<number>(0);
   const isCancelledRef = useRef<boolean>(false);
+  const isPausedRef = useRef<boolean>(false);
   const optionsRef = useRef<SpeechOptions>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -36,23 +72,6 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
     if (typeof window !== "undefined") {
       const audio = new Audio();
       audio.autoplay = false;
-      audio.onplay = () => {
-        setIsSpeaking(true);
-        setIsPaused(false);
-      };
-      audio.onpause = () => {
-        setIsSpeaking(false);
-      };
-      audio.onended = () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        setCurrentSentenceIndex(0);
-      };
-      audio.onerror = () => {
-        console.warn("Studio audio notice, stopping playback");
-        setIsSpeaking(false);
-        setIsPaused(false);
-      };
       audioRef.current = audio;
 
       return () => {
@@ -62,7 +81,77 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
     }
   }, []);
 
-  // Primary speak method: Korean is Male Anchor, English is Female Broadcast Anchor
+  const playSentence = useCallback(
+    (index: number) => {
+      if (typeof window === "undefined" || !audioRef.current) return;
+      if (isCancelledRef.current || index >= sentencesRef.current.length) {
+        setIsSpeaking(false);
+        setIsPaused(false);
+        isPausedRef.current = false;
+        setCurrentSentenceIndex(0);
+        setCurrentSentenceText("");
+        if (optionsRef.current.onComplete) {
+          optionsRef.current.onComplete();
+        }
+        return;
+      }
+
+      const sentence = sentencesRef.current[index];
+      if (!sentence || sentence.trim().length === 0) {
+        playSentence(index + 1);
+        return;
+      }
+
+      currentIndexRef.current = index;
+      setCurrentSentenceIndex(index + 1);
+      setCurrentSentenceText(sentence);
+      setIsSpeaking(true);
+      setIsPaused(false);
+      isPausedRef.current = false;
+
+      if (optionsRef.current.onSentenceChange) {
+        optionsRef.current.onSentenceChange(index + 1, sentence);
+      }
+
+      const locale = optionsRef.current.locale || defaultLocale;
+      const hasKorean = /[가-힣]/.test(sentence);
+      const isKo = locale === "ko" || (locale !== "en" && hasKorean);
+      const voiceKey: "ko-male" | "en-female" = isKo ? "ko-male" : "en-female";
+      const rate = optionsRef.current.rate || playbackRate;
+
+      setSelectedPersona(isKo ? "ko-male-anchor" : "us-female-anchor");
+      setActiveVoiceName(isKo ? "🎙️ 전문 남성 앵커 (한국어)" : "🎙️ US Broadcast Anchor (Female)");
+
+      const audio = audioRef.current;
+      const targetUrl = `/api/tts?voice=${voiceKey}&text=${encodeURIComponent(sentence.slice(0, 180))}`;
+
+      audio.src = targetUrl;
+      audio.playbackRate = rate;
+
+      audio.onended = () => {
+        if (!isCancelledRef.current && !isPausedRef.current) {
+          // Natural 110ms breathing pause between sentences
+          setTimeout(() => {
+            playSentence(index + 1);
+          }, 110);
+        }
+      };
+
+      audio.onerror = (err) => {
+        console.warn("TTS sentence playback notice, advancing:", err);
+        if (!isCancelledRef.current && !isPausedRef.current) {
+          playSentence(index + 1);
+        }
+      };
+
+      audio.play().catch((err) => {
+        console.warn("Audio play notice:", err);
+      });
+    },
+    [defaultLocale, playbackRate]
+  );
+
+  // Primary speak method: dynamically reads ANY text sentence by sentence
   const speak = useCallback(
     (text: string, options: SpeechOptions | ("ko" | "en") = defaultLocale) => {
       if (typeof window === "undefined" || !audioRef.current) return;
@@ -71,63 +160,29 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
         typeof options === "string" ? { locale: options } : options;
 
       optionsRef.current = resolvedOptions;
-      sentencesRef.current = [text];
+      isCancelledRef.current = false;
+      isPausedRef.current = false;
 
-      // Detect language: check explicit locale or Korean characters
-      const hasKorean = /[가-힣]/.test(text);
-      const isKo = resolvedOptions.locale === "ko" || (resolvedOptions.locale !== "en" && (defaultLocale === "ko" || hasKorean));
-      
-      const voiceKey: "ko-male" | "en-female" = isKo ? "ko-male" : "en-female";
-      setSelectedPersona(isKo ? "ko-male-anchor" : "us-female-anchor");
-      setActiveVoiceName(isKo ? "🎙️ 전문 남성 앵커 (한국어)" : "🎙️ US Broadcast Anchor (Female)");
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const chunks = splitTextIntoSentences(text);
+      sentencesRef.current = chunks;
+      setTotalSentences(chunks.length);
+      currentIndexRef.current = 0;
 
       const rate = resolvedOptions.rate || playbackRate;
       setPlaybackRate(rate);
 
-      isCancelledRef.current = false;
-      audioRef.current.pause();
-
-      // Clean text for optimal playback
-      const cleanSnippet = text
-        .replace(/["""]/g, '"')
-        .replace(/[''']/g, "'")
-        .replace(/•/g, " ")
-        .replace(/\*/g, "")
-        .replace(/#/g, "")
-        .replace(/—/g, ", ")
-        .trim()
-        .slice(0, 180);
-
-      // 1. Check if we have a direct book summary or briefing pre-rendered MP3
-      const bookId = resolvedOptions.bookId || "";
-      const targetAudioUrl = bookId
-        ? getStudioNarrationUrl(bookId, voiceKey)
-        : `/api/tts?voice=${voiceKey}&text=${encodeURIComponent(cleanSnippet)}`;
-
-      audioRef.current.src = targetAudioUrl;
-      audioRef.current.playbackRate = rate;
-
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsSpeaking(true);
-          setIsPaused(false);
-          setCurrentSentenceIndex(1);
-          setTotalSentences(1);
-        })
-        .catch((err) => {
-          console.warn("Studio MP3 playback fallback to /api/tts streaming:", err);
-          if (audioRef.current) {
-            audioRef.current.src = `/api/tts?voice=${voiceKey}&text=${encodeURIComponent(cleanSnippet)}`;
-            audioRef.current.play().catch(() => {});
-          }
-        });
+      playSentence(0);
     },
-    [defaultLocale, playbackRate]
+    [defaultLocale, playbackRate, playSentence]
   );
 
   const stop = useCallback(() => {
     isCancelledRef.current = true;
+    isPausedRef.current = false;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -138,23 +193,28 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
     setIsSpeaking(false);
     setIsPaused(false);
     setCurrentSentenceIndex(0);
+    setCurrentSentenceText("");
   }, []);
 
   const pause = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
+      isPausedRef.current = true;
       setIsPaused(true);
       setIsSpeaking(false);
     }
   }, []);
 
   const resume = useCallback(() => {
-    if (audioRef.current && audioRef.current.src) {
-      audioRef.current.play();
+    if (audioRef.current && isPausedRef.current) {
+      isPausedRef.current = false;
       setIsPaused(false);
       setIsSpeaking(true);
+      audioRef.current.play().catch(() => {
+        playSentence(currentIndexRef.current);
+      });
     }
-  }, []);
+  }, [playSentence]);
 
   const changePersona = useCallback(
     (persona: VoicePersona) => {
@@ -187,6 +247,7 @@ export function useSpeech(defaultLocale: "en" | "ko" = "ko") {
     activeVoiceName,
     currentSentenceIndex,
     totalSentences,
+    currentSentenceText,
     selectedPersona,
     playbackRate,
     changePersona,
